@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV·OTT 믹스 플래너</title>
+<meta name="robots" content="noindex">
+<style>
+@font-face{font-family:"Pretendard";src:url("fonts/PretendardVariable.woff2") format("woff2-variations");font-weight:45 920;font-display:swap}
+:root{
+  --plane:#f1f2f3;--surface:#fff;--ink:#1e2a38;--ink2:#5d6875;--muted:#8d96a0;--line:#e4e7ea;--gline:#eceef1;
+  --acc:#495e72;--hdr:#3c4957;--hdr2:#4f5d6b;
+  --u1:#354758;--u3:#8897a6;--ott:#c98a4a;
+  --me:#3a73b3;--me-soft:rgba(58,115,179,.09);--best:#56a274;--best-ink:#3f8a5d;--best-soft:rgba(86,162,116,.11);
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--plane);color:var(--ink);font:13px/1.5 "Pretendard",system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer;transition:transform .12s ease,background .15s,color .15s,box-shadow .15s,border-color .15s}
+button:active{transform:scale(.97)}
+input{font:inherit}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:18px;padding:18px 28px 14px;max-width:1480px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:11px}
+.mark{width:34px;height:34px;border-radius:10px;background:var(--ink);display:grid;place-items:center;flex:none}
+.brand h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.4px}
+.brand p{margin:1px 0 0;color:var(--muted);font-size:11.5px;font-weight:600}
+.chips{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.chip{padding:5px 10px;border-radius:999px;background:#e6e9ec;color:var(--ink2);font-size:11.5px;font-weight:600;white-space:nowrap}
+.chip b{color:var(--ink);font-weight:700}
+.btn{padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* layout */
+.layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:13px;padding:0 28px 28px;max-width:1480px;margin:0 auto;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 1px 2px rgba(20,30,45,.04)}
+.right{display:flex;flex-direction:column;gap:13px;min-width:0}
+
+/* settings */
+.settings{padding:20px 20px 18px;position:sticky;top:14px}
+.settings h2{margin:0 0 2px;font-size:14.5px;font-weight:800}
+.settings .sub{color:var(--muted);font-size:11.5px;font-weight:600;margin-bottom:12px}
+.field{padding:14px 0;border-top:1px solid var(--gline)}
+.field.first{border-top:0;padding-top:4px}
+.lab{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:8px}
+.lab small{font-weight:600;color:var(--muted);font-size:11px}
+.budget{display:flex;align-items:center;border:1.5px solid var(--ink);border-radius:11px;padding:0 14px;height:50px;gap:8px}
+.budget input{border:0;outline:0;font-size:21px;font-weight:800;letter-spacing:-.6px;width:100%;min-width:0;color:var(--ink);font-variant-numeric:tabular-nums;background:transparent}
+.budget span{font-size:15px;font-weight:700;color:var(--ink2);white-space:nowrap}
+.won-hint{margin-top:6px;font-size:11.5px;font-weight:700;color:var(--ink2);text-align:right}
+
+.ratio-big{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px}
+.ratio-big .m{display:flex;flex-direction:column}
+.ratio-big .m em{font-style:normal;font-size:11px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:5px}
+.ratio-big .m em i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.ratio-big .m b{font-size:24px;font-weight:800;letter-spacing:-.8px;line-height:1.15}
+.ratio-big .m.r{text-align:right;align-items:flex-end}
+.split{position:relative;height:30px;margin:4px 0 2px}
+.split .track{position:absolute;left:12px;right:12px;top:11px;height:8px;border-radius:99px;overflow:hidden;display:flex;background:var(--ott)}
+.split .track .t{background:var(--acc)}
+.split .zone{position:absolute;top:7px;height:16px;border-radius:5px;border:1.5px dashed var(--best);background:var(--best-soft)}
+.split input{position:absolute;inset:0;width:100%;margin:0;opacity:0;cursor:ew-resize}
+.split .knob{position:absolute;top:3px;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:#fff;border:2px solid var(--me);box-shadow:0 2px 6px rgba(30,42,56,.22);pointer-events:none}
+.split-legend{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.split-legend .z{color:var(--best-ink);font-weight:700}
+.amt{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.amt label{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;padding:0 11px;height:38px;gap:8px;font-size:11.5px;color:var(--muted);font-weight:700;transition:border-color .15s}
+.amt label:focus-within{border-color:var(--me)}
+.amt label .nm{min-width:40px;flex:none;display:flex;align-items:center;gap:5px}
+.amt label .nm i{flex:none;width:7px;height:7px;border-radius:2px;display:inline-block}
+.amt input{border:0;outline:0;font-size:14px;font-weight:700;width:100%;min-width:0;text-align:right;color:var(--ink);background:transparent;font-variant-numeric:tabular-nums}
+.amt .eok{font-size:11px;color:var(--muted);font-weight:600;min-width:52px;text-align:right}
+.seg{display:flex;background:#eef0f2;border-radius:10px;padding:3px;gap:2px}
+.seg button{white-space:nowrap;flex:1;border:0;background:transparent;border-radius:8px;padding:7px 4px;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.25}
+.seg button small{display:block;font-size:10.5px;color:var(--muted);font-weight:600}
+.seg button.on{background:#fff;color:var(--ink);font-weight:800;box-shadow:0 1px 3px rgba(20,30,45,.12)}
+.seg.col{flex-direction:column}
+.seg.col button{text-align:left;padding:8px 10px;display:flex;justify-content:space-between;align-items:center}
+.tolbox{display:flex;align-items:center;gap:8px}
+.tolbox label{white-space:nowrap;flex:1;display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;padding:0 11px;height:38px;gap:6px;font-size:11.5px;color:var(--muted);font-weight:700}
+.tolbox label:focus-within{border-color:var(--me)}
+.tolbox input{border:0;outline:0;font-size:14px;font-weight:700;width:100%;min-width:0;text-align:right;color:var(--ink);background:transparent;font-variant-numeric:tabular-nums}
+.stepper{display:flex;gap:4px}
+.stepper button{width:34px;height:38px;border:1px solid var(--line);background:#fff;border-radius:9px;font-size:16px;font-weight:700;color:var(--ink2)}
+.reset{border:0;background:none;color:var(--muted);font-size:11px;font-weight:700;padding:0;text-decoration:underline;text-underline-offset:2px}
+.hint{font-size:11px;color:var(--muted);font-weight:500;margin-top:7px;line-height:1.5}
+.formula{margin-top:4px;background:#f6f7f8;border-radius:10px;padding:11px 12px;font-size:11px;color:var(--ink2);line-height:1.6}
+.formula b{color:var(--ink);font-weight:700}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.kpi{padding:15px 17px 14px;position:relative;overflow:hidden;text-align:left}
+.kpi .k{font-size:11.5px;font-weight:700;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.kpi .tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px}
+.tag.me{background:var(--me-soft);color:var(--me)}
+.tag.best{background:var(--best-soft);color:var(--best-ink)}
+.kpi .v{font-size:26px;font-weight:800;letter-spacing:-.9px;margin-top:5px;line-height:1.15;white-space:nowrap}
+.kpi .v small{font-size:14px;font-weight:700;letter-spacing:-.3px;color:var(--ink2);margin-left:2px}
+.kpi .v .sep{color:var(--muted);font-weight:600;margin:0 6px;font-size:20px}
+.kpi .v .md{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0;margin-right:3px}
+.kpi .s{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px}
+.kpi .s b{color:var(--ink);font-weight:700}
+.up{color:var(--best-ink)}.dn{color:#a4574f}
+.kpi.me-k{border-color:rgba(58,115,179,.35)}
+.kpi.me-k::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--me)}
+button.kpi{font:inherit;color:inherit;border:1px solid var(--line);cursor:pointer}
+button.kpi:hover{border-color:var(--best);box-shadow:0 4px 14px rgba(86,162,116,.16)}
+button.kpi:hover .go{opacity:1;transform:translateX(0)}
+.kpi .go{position:absolute;right:14px;top:14px;font-size:10.5px;font-weight:800;color:var(--best-ink);opacity:0;transform:translateX(-4px);transition:opacity .15s,transform .15s}
+button.kpi.cur{cursor:default}
+button.kpi.cur:hover{border-color:var(--line);box-shadow:0 1px 2px rgba(20,30,45,.04)}
+
+/* chart */
+.chart-card{padding:18px 20px 12px}
+.c-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.c-head h3{margin:0;font-size:14.5px;font-weight:800}
+.c-head p{margin:2px 0 0;font-size:11.5px;color:var(--muted);font-weight:600}
+.legend{display:flex;gap:14px;margin-left:auto;align-items:center}
+.lg{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--ink2)}
+.lg svg{display:block}
+.plot{position:relative;margin-top:8px}
+.plot svg{display:block;width:100%;user-select:none;touch-action:none}
+.plot svg text{font-family:inherit}
+.callout{position:absolute;pointer-events:none;background:#fff;border:1.5px solid var(--me);border-radius:12px;padding:10px 12px 9px;box-shadow:0 6px 18px rgba(30,42,56,.12);width:max-content;white-space:nowrap;z-index:5;transition:opacity .15s}
+.callout.dim{opacity:.18}
+.callout .h{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--me)}
+.callout .h i{width:8px;height:8px;border-radius:50%;background:var(--me);display:inline-block}
+.callout .mix{font-size:15px;font-weight:800;letter-spacing:-.4px;margin:2px 0 1px}
+.callout .won{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:6px}
+.callout .row{display:flex;justify-content:space-between;gap:18px;font-size:11.5px;color:var(--ink2);font-weight:600;padding:1px 0}
+.callout .row b{color:var(--ink);font-weight:800}
+.callout .row em{font-style:normal;font-size:10.5px;margin-left:5px}
+.hcard{position:absolute;pointer-events:none;background:rgba(31,44,61,.95);color:#fff;border-radius:10px;padding:10px 12px;font-size:11.5px;z-index:9999;width:max-content;white-space:nowrap;opacity:0;transition:opacity .12s;box-shadow:0 8px 22px rgba(20,30,45,.22)}
+.hcard .t{font-weight:800;font-size:14px;letter-spacing:-.3px}
+.hcard .w{color:#aeb9c5;font-weight:600;margin-bottom:6px}
+.hcard .r{display:flex;justify-content:space-between;gap:18px;color:#cfd6de;padding:1px 0}
+.hcard .r b{color:#fff;font-weight:800}
+.hcard .r em{font-style:normal;font-size:10.5px;margin-left:5px;color:#9fd7b4}
+.hcard .r em.dn{color:#f0a49b}
+.hcard .r.sub{color:#9aa6b2}
+.hcard .r.sub b{color:#dfe5eb;font-weight:700}
+.hcard .f{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.12);color:#9aa6b2;font-size:10.5px;font-weight:600}
+.c-foot{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:11px;font-weight:600;padding:6px 2px 2px;border-top:1px solid var(--gline);margin-top:4px}
+
+/* table */
+.table-card{padding:18px 20px 18px}
+.t-wrap{margin-top:12px;border-radius:13px;overflow:hidden;border:1px solid var(--line)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums}
+th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0 9px;height:33px;white-space:nowrap}
+th:last-child,td:last-child{border-right:0}
+tbody tr:last-child td{border-bottom:0}
+thead th{background:var(--hdr);color:#fff;font-weight:700;font-size:11.5px;text-align:center;border-color:rgba(255,255,255,.14)}
+thead tr.g th{background:var(--hdr2)}
+td{text-align:right;background:#fff;font-size:12.5px}
+td.c{text-align:center;font-weight:700;color:var(--ink)}
+td.u{font-weight:800;color:var(--ink)}
+td.mut,span.mut{color:var(--muted)}
+.bl{border-left:2px solid var(--line)}
+thead .bl{border-left-color:rgba(255,255,255,.3)}
+td .pill{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:1px}
+.pill.me{background:var(--me);color:#fff}
+.pill.best{background:var(--best);color:#fff}
+.pill.zone{background:var(--best-soft);color:var(--best-ink)}
+tr.me-row td{border-bottom-color:var(--me);font-weight:800;color:var(--me)}
+tr.before-me td{border-bottom-color:var(--me)}
+tr.me-row td:first-child{box-shadow:inset 3px 0 0 var(--me)}
+td.bestcell{color:var(--best-ink);font-weight:800}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:#fafbfc}
+.t-head{display:flex;align-items:center;gap:16px}
+.t-head .seg button{padding:5px 11px;font-size:11.5px}
+.notes{color:var(--muted);font-size:11px;font-weight:500;line-height:1.7;padding:0 4px}
+.notes b{color:var(--ink2);font-weight:700}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(20,28,38,.38);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal-bg.open{display:flex;animation:fade .16s ease-out}
+.modal{background:#fff;border-radius:16px;width:min(400px,100%);padding:22px 22px 18px;box-shadow:0 18px 48px rgba(20,30,45,.25);animation:pop .18s ease-out}
+.modal.wide{width:min(620px,100%)}
+.modal h4{margin:0 0 4px;font-size:16px;font-weight:800}
+.modal p{margin:0;color:var(--ink2);font-size:12.5px;line-height:1.65}
+.modal .mixbox{margin:14px 0 4px;border-radius:12px;background:#f6f7f8;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.modal .mixbox .from{color:var(--muted);font-weight:700;font-size:12px}
+.modal .mixbox .to{font-size:18px;font-weight:800;letter-spacing:-.4px}
+.modal .mixbox .arrow{color:var(--muted)}
+.modal .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.modal .acts .btn.ok{background:var(--best);border-color:var(--best);color:#fff}
+.modal ul{margin:8px 0 0;padding-left:18px;color:var(--ink2);font-size:12.5px;line-height:1.75}
+.modal ul b{color:var(--ink)}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.98)}}
+
+@media (max-width:1100px){.layout{grid-template-columns:1fr}.settings{position:static}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.chips{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="mark"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 14 C5 6, 8 4, 16 3" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="10" cy="5.2" r="2.3" fill="#7fb0e6"/></svg></div>
+    <div><h1>TV·OTT 믹스 플래너</h1><p>예산 비중별 예상 도달률 시뮬레이션 · 타깃 F30-45</p></div>
+  </div>
+  <div class="chips">
+    <span class="chip">TV <b>Nielsen 시뮬레이션 769건</b></span>
+    <span class="chip">OTT <b>1~30억 도달 곡선</b></span>
+    <span class="chip">중복계수 <b>한국리서치 최근 1주</b></span>
+  </div>
+  <button class="btn" id="btnLogic">로직 설명</button>
+  <button class="btn dark" id="btnCsv"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v7.5m0 0L4 6m3 3 3-3M2 11.5h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>엑셀로 저장</button>
+</header>
+
+<main class="layout">
+  <aside class="card settings">
+    <h2>플랜 설정</h2>
+    <div class="sub">값을 바꾸면 그래프와 표가 바로 다시 계산됩니다</div>
+
+    <div class="field first">
+      <div class="lab">전체 광고 예산 <small>운영비·OTT 집행비 포함</small></div>
+      <div class="budget"><input id="budget" class="num" inputmode="numeric" autocomplete="off"><span>원</span></div>
+      <div class="won-hint num" id="budgetHint"></div>
+    </div>
+
+    <div class="field">
+      <div class="lab">TV · OTT 비중 <small>금액을 입력하면 비중이 맞춰집니다</small></div>
+      <div class="ratio-big">
+        <div class="m"><em><i style="background:var(--acc)"></i>TV</em><b class="num" id="tvPct"></b></div>
+        <div class="m r"><em>OTT<i style="background:var(--ott)"></i></em><b class="num" id="ottPct"></b></div>
+      </div>
+      <div class="split">
+        <div class="track"><div class="t" id="trT"></div></div>
+        <div class="zone" id="zone"></div>
+        <input type="range" id="slider" min="0" max="100" step="0.5" aria-label="TV 비중">
+        <div class="knob" id="knob"></div>
+      </div>
+      <div class="split-legend"><span>TV 100%</span><span class="z">초록 칸 = Reach 1+ 허용 구간</span><span>OTT 100%</span></div>
+      <div class="amt">
+        <label><span class="nm"><i style="background:var(--acc)"></i>TV</span><input id="tvIn" class="num" inputmode="numeric" autocomplete="off"><span class="eok num" id="tvEok"></span></label>
+        <label><span class="nm"><i style="background:var(--ott)"></i>OTT</span><input id="ottIn" class="num" inputmode="numeric" autocomplete="off"><span class="eok num" id="ottEok"></span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lab">OTT 집행 구성</div>
+      <div class="seg col" id="ottMix">
+        <button class="on" data-v="nf80">넷플릭스 80% + 티빙 20%<small>30억 Reach 1+ 54.0%</small></button>
+        <button data-v="nf100">넷플릭스 100%<small>30억 Reach 1+ 48.4%</small></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lab">중복계수 <small>TV·OTT 시청자 겹침 정도</small></div>
+      <div class="seg" id="lam">
+        <button data-v="1.00">1.00<small>무관</small></button>
+        <button class="on" data-v="1.08">1.08<small>기준</small></button>
+        <button data-v="1.15">1.15<small>보수</small></button>
+      </div>
+      <div class="hint">F30-45 최근 1주 TV 75.5% · OTT 60.7% · 교집합 49.3% → 1.076</div>
+    </div>
+
+    <div class="field">
+      <div class="lab">TV 도달 곡선 <small>Hill 곡선 적합 구간</small></div>
+      <div class="seg" id="tvc">
+        <button data-v="low">보수<small>≥1억</small></button>
+        <button class="on" data-v="base">기준<small>≥5억</small></button>
+        <button data-v="high">낙관<small>≥20억</small></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lab">허용 구간 <button class="reset" id="tolReset">기본값 0.2%p</button></div>
+      <div class="tolbox">
+        <label>최대 대비<input id="tol" class="num" inputmode="decimal" autocomplete="off"><span>%p 이내</span></label>
+        <div class="stepper"><button id="tolDn" aria-label="줄이기">−</button><button id="tolUp" aria-label="늘리기">+</button></div>
+      </div>
+      <div class="hint">최대 도달률과의 차이가 이 값 이내인 비중을 '허용 구간'으로 표시합니다. 최적점 부근은 곡선이 평평해 한 점보다 구간으로 보는 편이 안전합니다.</div>
+    </div>
+
+    <div class="formula"><b>통합 도달</b> = TV + OTT − min(계수 × TV × OTT, min(TV, OTT))<br>겹침은 두 도달 중 작은 쪽을 넘지 않습니다.</div>
+  </aside>
+
+  <section class="right">
+    <div class="kpis">
+      <div class="card kpi me-k"><div class="k">Reach 1+ <span class="tag me">내 플랜</span></div><div class="v num" id="k1"></div><div class="s" id="k1s"></div></div>
+      <div class="card kpi me-k"><div class="k">Reach 3+ <span class="tag me">내 플랜</span></div><div class="v num" id="k3"></div><div class="s" id="k3s"></div></div>
+      <button class="card kpi" id="kb1"><span class="go">눌러서 적용 →</span><div class="k">Reach 1+ 최적 믹스 <span class="tag best">최적</span></div><div class="v num" id="kb1v"></div><div class="s" id="kb1s"></div></button>
+      <button class="card kpi" id="kb3"><span class="go">눌러서 적용 →</span><div class="k">Reach 3+ 최적 믹스 <span class="tag best">최적</span></div><div class="v num" id="kb3v"></div><div class="s" id="kb3s"></div></button>
+    </div>
+
+    <div class="card chart-card">
+      <div class="c-head">
+        <div><h3>비중별 예상 도달률</h3><p id="cSub"></p></div>
+        <div class="legend">
+          <span class="lg"><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--u1)" stroke-width="3.2" stroke-linecap="round"/></svg>Reach 1+</span>
+          <span class="lg"><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--u3)" stroke-width="2.6" stroke-linecap="round"/></svg>Reach 3+</span>
+        </div>
+      </div>
+      <div class="plot" id="plot"><svg id="svg"></svg><div class="callout" id="callout"></div><div class="hcard" id="hcard"></div></div>
+      <div class="c-foot"><span>그래프 위에 마우스를 올리면 그 지점 값을 보여 주고, 클릭하거나 파란 선을 끌면 비중이 바뀝니다</span><span id="cNote"></span></div>
+    </div>
+
+    <div class="card table-card">
+      <div class="t-head">
+        <div><h3 style="margin:0;font-size:14.5px;font-weight:800">비중별 상세 값</h3><p style="margin:2px 0 0;font-size:11.5px;color:var(--muted);font-weight:600">내 플랜과 최적 비중은 간격과 상관없이 항상 표에 들어갑니다 · 행을 누르면 그 비중으로 바뀝니다</p></div>
+        <div style="margin-left:auto" class="seg" id="step"><button data-v="1">1%p</button><button data-v="2.5">2.5%p</button><button class="on" data-v="5">5%p</button><button data-v="10">10%p</button></div>
+      </div>
+      <div class="t-wrap"><table id="tbl"></table></div>
+    </div>
+
+    <div class="notes">
+      <b>읽는 법</b> · 최적점 부근은 곡선이 평평해 한 점보다 허용 구간으로 보는 편이 안전합니다. Reach 1+ 증분은 중복계수에 민감하고(1.15면 거의 0), Reach 3+는 빈도 보완 효과라 더 견고합니다.<br>
+      <b>한계</b> · OTT 곡선은 30억까지 실측이고 그 이상은 마지막 값을 유지합니다. TV 189억 초과는 곡선 외삽입니다. Reach 3+ 통합은 매체별 3회 이상 도달자의 합집합이라 실제보다 보수적(하한)입니다. 두 곡선의 타깃·기간은 F30-45·동일 기간으로 가정했습니다.
+    </div>
+  </section>
+</main>
+
+<div class="modal-bg" id="mBg"><div class="modal" id="mBox"></div></div>
+
+<script>
+const OTT = {"nf80":{"r1":[23.7,32.0743,36.8875,40.0817,42.3795,44.122,45.4942,46.6059,47.5269,48.3036,48.9684,49.5445,50.0489,50.4947,50.8918,51.248,51.5695,51.8612,52.1272,52.3709,52.595,52.8019,52.9935,53.1716,53.3376,53.4926,53.6378,53.7741,53.9023,54.0232],"r3":[8.7161,15.6256,20.8579,24.9266,28.1756,30.8296,33.0389,34.9076,36.5094,37.8984,39.1148,40.1893,41.1457,42.0027,42.7753,43.4755,44.1132,44.6965,45.2322,45.726,46.1826,46.6063,47.0004,47.3681,47.712,48.0342,48.3369,48.6218,48.8904,49.1442]},"nf100":{"r1":[21.3625,28.6791,32.8826,35.6869,37.718,39.2695,40.4998,41.5034,42.3399,43.0496,43.6604,44.1924,44.6605,45.0761,45.4478,45.7825,46.0857,46.3618,46.6144,46.8465,47.0607,47.2589,47.443,47.6145,47.7747,47.9247,48.0655,48.1979,48.3228,48.4407],"r3":[7.3591,13.3454,17.9305,21.5276,24.4217,26.8017,28.7947,30.4895,31.9494,33.2209,34.3389,35.3303,36.2157,37.0117,37.7313,38.3854,38.9826,39.5302,40.0343,40.5,40.9315,41.3326,41.7065,42.0559,42.3831,42.6903,42.9793,43.2517,43.5088,43.7521]}};
+const TV = { low:{r1:[91.9628,3.9447,0.7359],r3:[83.467,8.2665,0.9014]}, base:{r1:[92.8135,3.9086,0.7046],r3:[88.2141,9.3506,0.7904]}, high:{r1:[90.9841,3.7119,0.7532],r3:[94.4788,9.7313,0.6214]} };
+const TV_MAX_OBS = 189.2, OTT_MAX = 30, EOK = 1e8, TOL_DEFAULT = 0.2;
+
+/* budget is kept in 원; share = OTT 비중(%) */
+const S = { won:200*EOK, share:20, mix:'nf80', lam:1.08, tvc:'base', tol:TOL_DEFAULT, step:5 };
+const B = () => S.won/EOK;
+
+const hill = (b,[R,k,h]) => b<=0 ? 0 : Math.min(100, R*Math.pow(b,h)/(Math.pow(k,h)+Math.pow(b,h)));
+function ottR(s, arr){ if(s<=0) return 0; if(s>=OTT_MAX) return arr[arr.length-1];
+  const i=Math.floor(s), y0=i===0?0:arr[i-1], y1=arr[i]; return y0+(y1-y0)*(s-i); }
+const union = (a,o,L) => { a/=100; o/=100; return 100*(a+o-Math.min(L*a*o, Math.min(a,o))); };
+function calc(share){
+  const o=B()*share/100, t=B()-o, P=TV[S.tvc], C=OTT[S.mix];
+  const tv1=hill(t,P.r1), tv3=hill(t,P.r3), o1=ottR(o,C.r1), o3=ottR(o,C.r3);
+  return {share, o, t, tv1, tv3, o1, o3, u1:union(tv1,o1,S.lam), u3:union(tv3,o3,S.lam)};
+}
+let G=[], BASE, OPT1, OPT3, Z1, Z3;
+function compute(){
+  G=[]; for(let i=0;i<=200;i++) G.push(calc(i/2));
+  BASE=G[0];
+  const opt=k=>G.reduce((a,b)=> b[k]>a[k]+1e-9 ? b : a, G[0]);
+  OPT1=opt('u1'); OPT3=opt('u3');
+  const zone=(k,best)=>{ const ok=G.filter(g=>g[k]>=best[k]-S.tol-1e-9); return [ok[0].share, ok[ok.length-1].share]; };
+  Z1=zone('u1',OPT1); Z3=zone('u3',OPT3);
+}
+
+/* formatting */
+const f1=v=>v.toFixed(1);
+const fP=v=>{ const r=Math.round(v*10)/10; return Number.isInteger(r)?String(r):r.toFixed(1); };
+const fE=v=>(Math.round(v*10)/10).toLocaleString('ko-KR',{maximumFractionDigits:1});
+const won=v=>Math.round(v).toLocaleString('ko-KR');
+const signed=v=>{ const r=Math.round(v*10)/10; return r>0?`<span class="up">▲${r.toFixed(1)}%p</span>`:r<0?`<span class="dn">▼${Math.abs(r).toFixed(1)}%p</span>`:`<span class="mut">±0.0%p</span>`; };
+const signed2=v=>{ const r=Math.round(v*100)/100; return r>0?`+${r.toFixed(2)}`:r<0?`−${Math.abs(r).toFixed(2)}`:'−0.00'; };
+const mixTxt=s=>`TV ${fP(100-s)} : OTT ${fP(s)}`;
+function eokTxt(w){ const e=w/EOK; if(e>=1) return fE(e)+'억'; const m=w/1e4; return m>=1? Math.round(m).toLocaleString('ko-KR')+'만':won(w); }
+const digits=s=>parseFloat(String(s).replace(/[^\d.]/g,''))||0;
+
+/* ---------- inputs ---------- */
+const $=id=>document.getElementById(id);
+function segBind(id,key,conv=v=>v){ $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ $(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); S[key]=conv(b.dataset.v); render(); }); }
+segBind('ottMix','mix'); segBind('lam','lam',Number); segBind('tvc','tvc'); segBind('step','step',Number);
+$('slider').oninput=e=>{ S.share=100-(+e.target.value); render(); };
+
+function liveMoney(el, onVal){
+  el.addEventListener('input',()=>{ // keep caret stable while reformatting with commas
+    const pos=el.selectionStart, before=el.value.slice(0,pos).replace(/[^\d]/g,'').length;
+    const raw=el.value.replace(/[^\d]/g,''); el.value=raw?Number(raw).toLocaleString('ko-KR'):'';
+    let i=0,c=0; while(i<el.value.length && c<before){ if(/\d/.test(el.value[i])) c++; i++; } el.setSelectionRange(i,i);
+    onVal(raw?Number(raw):0);
+  });
+  el.addEventListener('blur',()=>render());
+  el.addEventListener('keydown',e=>{ if(e.key==='Enter') el.blur(); });
+}
+liveMoney($('budget'), v=>{ if(v>0){ S.won=v; render(); } });
+liveMoney($('tvIn'),  v=>{ const t=Math.min(v,S.won); S.share=(S.won-t)/S.won*100; render(); });
+liveMoney($('ottIn'), v=>{ const o=Math.min(v,S.won); S.share=o/S.won*100; render(); });
+
+function setTol(v){ v=Math.round(Math.max(0.05,Math.min(5,v))*100)/100; S.tol=v; render(); }
+$('tol').addEventListener('change',e=>setTol(digits(e.target.value)||TOL_DEFAULT));
+$('tol').addEventListener('keydown',e=>{ if(e.key==='Enter') e.target.blur(); });
+$('tolUp').onclick=()=>setTol(S.tol+0.1); $('tolDn').onclick=()=>setTol(S.tol-0.1); $('tolReset').onclick=()=>setTol(TOL_DEFAULT);
+
+/* ---------- modal ---------- */
+function openModal(html, wide){ const b=$('mBox'); b.className='modal'+(wide?' wide':''); b.innerHTML=html; $('mBg').classList.add('open'); const ok=b.querySelector('.ok'); (ok||b.querySelector('button'))?.focus(); }
+function closeModal(){ $('mBg').classList.remove('open'); }
+$('mBg').addEventListener('click',e=>{ if(e.target.id==='mBg'||e.target.dataset.close!==undefined) closeModal(); });
+addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+function confirmMix(label, target){
+  const g=calc(target);
+  openModal(`<h4>${label}로 바꿀까요?</h4><p>현재 비중을 아래처럼 조정합니다. 예산 총액은 그대로입니다.</p>
+    <div class="mixbox"><span class="from num">${mixTxt(S.share)}</span><span class="arrow">→</span><span class="to num">${mixTxt(target)}</span></div>
+    <p class="num">TV ${won(g.t*EOK)}원 · OTT ${won(g.o*EOK)}원<br>Reach 1+ ${f1(g.u1)}% · Reach 3+ ${f1(g.u3)}%</p>
+    <div class="acts"><button class="btn" data-close>취소</button><button class="btn ok" id="mOk">적용</button></div>`);
+  $('mOk').onclick=()=>{ S.share=target; closeModal(); render(); };
+}
+$('kb1').onclick=()=>{ if(Math.abs(OPT1.share-S.share)>1e-9) confirmMix('Reach 1+ 최적 믹스', OPT1.share); };
+$('kb3').onclick=()=>{ if(Math.abs(OPT3.share-S.share)>1e-9) confirmMix('Reach 3+ 최적 믹스', OPT3.share); };
+$('btnLogic').onclick=()=>openModal(`<h4>로직 설명</h4><p>총예산 안에서 OTT 비중을 0~100%까지 0.5%p 간격으로 모두 계산해 통합 도달이 가장 높은 비중을 찾습니다.</p>
+  <ul><li><b>TV 도달</b> · Nielsen 시뮬레이션 769건을 Hill 곡선(도달 = R × 예산^h ÷ (k^h + 예산^h))으로 적합. 기준 = 예산 5억 이상 적합</li>
+  <li><b>OTT 도달</b> · 1~30억 곡선 선형보간, 30억 이후 마지막 값 유지</li>
+  <li><b>통합 도달</b> · TV + OTT − min(계수 × TV × OTT, min(TV, OTT))</li>
+  <li><b>중복계수</b> · 실제 교집합 ÷ 무관할 때 기대 교집합. 한국리서치 F30-45 최근 1주: TV 75.5%, OTT 60.7%, 합집합 86.9% → 교집합 49.3% ÷ 기대 45.8% = 1.076</li>
+  <li><b>허용 구간</b> · 최대 도달 대비 설정값(기본 0.2%p) 이내인 OTT 비중 범위</li>
+  <li><b>Reach 3+</b> · 매체별 3회 이상 도달자의 합집합이라 실제 합산 3+보다 보수적(하한)</li></ul>
+  <div class="acts"><button class="btn" data-close>닫기</button></div>`, true);
+$('btnCsv').onclick=()=>{
+  const head=['TV 비중(%)','OTT 비중(%)','TV 예산(원)','OTT 예산(원)','TV 단독 1+(%)','OTT 단독 1+(%)','Reach 1+(%)','TV 단독 3+(%)','OTT 단독 3+(%)','Reach 3+(%)'];
+  const meta=[[`총 예산(원)`,Math.round(S.won)],['OTT 집행 구성',S.mix==='nf80'?'넷플릭스 80% + 티빙 20%':'넷플릭스 100%'],['중복계수',S.lam],['TV 곡선',{low:'보수',base:'기준',high:'낙관'}[S.tvc]],['허용 구간(%p)',S.tol],
+    ['내 플랜',mixTxt(S.share)],['Reach 1+ 최적',mixTxt(OPT1.share)],['Reach 3+ 최적',mixTxt(OPT3.share)],[]];
+  const rows=G.map(g=>[100-g.share,g.share,Math.round(g.t*EOK),Math.round(g.o*EOK),f1(g.tv1),f1(g.o1),g.u1.toFixed(2),f1(g.tv3),f1(g.o3),g.u3.toFixed(2)]);
+  const csv='﻿'+[...meta,head,...rows].map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`TV_OTT_믹스_${Math.round(B())}억.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+
+/* ---------- render ---------- */
+function render(){
+  compute();
+  const me=calc(S.share), act=document.activeElement;
+  if(act!==$('budget')) $('budget').value=won(S.won);
+  $('budgetHint').textContent=`= ${eokTxt(S.won)} 원`;
+  if(act!==$('tvIn')) $('tvIn').value=won(me.t*EOK);
+  if(act!==$('ottIn')) $('ottIn').value=won(me.o*EOK);
+  $('tvEok').textContent=eokTxt(me.t*EOK); $('ottEok').textContent=eokTxt(me.o*EOK);
+  if(act!==$('tol')) $('tol').value=S.tol.toFixed(S.tol*10%1?2:1);
+  $('slider').value=100-S.share; $('tvPct').textContent=fP(100-S.share)+'%'; $('ottPct').textContent=fP(S.share)+'%';
+  $('trT').style.width=(100-S.share)+'%';
+  $('knob').style.left=`calc(12px + (100% - 24px) * ${(100-S.share)/100})`;
+  $('zone').style.left=`calc(12px + (100% - 24px) * ${(100-Z1[1])/100} - 3px)`; $('zone').style.width=`calc((100% - 24px) * ${(Z1[1]-Z1[0])/100} + 6px)`;
+  // KPI
+  $('k1').innerHTML=f1(me.u1)+'<small>%</small>'; $('k1s').innerHTML=`TV 단독 대비 ${signed(me.u1-BASE.u1)}`;
+  $('k3').innerHTML=f1(me.u3)+'<small>%</small>'; $('k3s').innerHTML=`TV 단독 대비 ${signed(me.u3-BASE.u3)}`;
+  const optV=g=>`<span class="md">TV</span>${fP(100-g.share)}<small>%</small><span class="sep">:</span><span class="md">OTT</span>${fP(g.share)}<small>%</small>`;
+  const isCur=g=>Math.abs(g.share-S.share)<1e-9;
+  $('kb1v').innerHTML=optV(OPT1); $('kb1s').innerHTML=`Reach 1+ <b>${f1(OPT1.u1)}%</b>`+(isCur(OPT1)?' · <b class="up">현재 적용 중</b>':'');
+  $('kb3v').innerHTML=optV(OPT3); $('kb3s').innerHTML=`Reach 3+ <b>${f1(OPT3.u3)}%</b>`+(isCur(OPT3)?' · <b class="up">현재 적용 중</b>':'');
+  $('kb1').classList.toggle('cur',isCur(OPT1)); $('kb3').classList.toggle('cur',isCur(OPT3));
+  $('cSub').textContent=`총 ${eokTxt(S.won)} 원 · 아래 축은 OTT, 위 축은 TV 비중 · 파란 선이 내가 설정한 비중`;
+  drawChart(me); drawTable(me);
+}
+
+/* ---------- chart ---------- */
+function niceStep(range,n){ const raw=range/n, p=Math.pow(10,Math.floor(Math.log10(raw))); for(const m of [1,2,2.5,5,10]) if(m*p>=raw) return m*p; return 10*p; }
+let SC=null, hovering=false;
+function drawChart(me){
+  const svg=$('svg'), W=$('plot').clientWidth, H=470, m={l:46,r:20,t:64,b:52};
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H);
+  const x0=0,x1=100;
+  let lo=Math.min(...G.flatMap(g=>[g.u1,g.u3])), hi=Math.max(...G.flatMap(g=>[g.u1,g.u3]));
+  const step=niceStep(Math.max(hi-lo,2),5); let y0=Math.floor(lo/step)*step; if(lo-y0<step*.3) y0-=step; y0=Math.max(0,y0);
+  let y1=Math.min(100,Math.ceil((hi+(hi-y0)*.05)/step)*step);
+  const X=v=>m.l+(v-x0)/(x1-x0)*(W-m.l-m.r), Y=v=>m.t+(1-(v-y0)/(y1-y0))*(H-m.t-m.b);
+  SC={X,Y,x0,x1,m,W,H};
+  const mx=X(S.share), pb=H-m.b, pt=m.t;
+  let s=`<defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#354758" stop-opacity=".15"/><stop offset="1" stop-color="#354758" stop-opacity="0"/></linearGradient><clipPath id="cp"><rect x="${m.l}" y="${pt-3}" width="${W-m.l-m.r}" height="${pb-pt+3}"/></clipPath></defs>`;
+  // OTT data-end region
+  const endShare=OTT_MAX/B()*100;
+  if(endShare<100){ const ex=Math.max(X(endShare),m.l);
+    s+=`<rect x="${ex}" y="${pt}" width="${W-m.r-ex}" height="${pb-pt}" fill="#f8f9fa"/>`;
+    if(endShare>0){ const tx=Math.abs(mx-ex)<14? ex+12 : ex+13, ty=Y(y0+(y1-y0)*.45);
+      s+=`<line x1="${ex}" x2="${ex}" y1="${pt}" y2="${pb}" stroke="#b9c1c9" stroke-dasharray="2 3"/><text transform="translate(${tx},${ty}) rotate(-90)" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600">OTT 곡선 실측 끝 ${OTT_MAX}억 →</text>`; } }
+  // grid + y labels
+  for(let v=y0; v<=y1+1e-9; v+=step){ const y=Y(v); s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="#e6e9ec"/><text x="${m.l-9}" y="${y+3.5}" text-anchor="end" font-size="11" fill="var(--muted)" font-weight="600">${+v.toFixed(1)}%</text>`; }
+  // x axes: bottom OTT, top TV
+  const near=x=>Math.abs(x-mx)<34;
+  for(let v=0; v<=100; v+=10){ const x=X(v), hide=near(x);
+    s+=`<line x1="${x}" x2="${x}" y1="${pb}" y2="${pb+4}" stroke="#c6ccd2"/><line x1="${x}" x2="${x}" y1="${pt-4}" y2="${pt}" stroke="#c6ccd2"/>`;
+    if(!hide) s+=`<text x="${x}" y="${pb+18}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-weight="700">${v}%</text><text x="${x}" y="${pt-11}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-weight="700">${100-v}%</text>`;
+    s+=`<text x="${x}" y="${pb+32}" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600" ${hide?'opacity="0"':''}>${fE(B()*v/100)}억</text><text x="${x}" y="${pt-25}" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600" ${hide?'opacity="0"':''}>${fE(B()*(100-v)/100)}억</text>`; }
+  s+=`<text x="${m.l-40}" y="${pb+18}" font-size="10.5" fill="var(--ott)" font-weight="800">OTT</text><text x="${m.l-40}" y="${pt-11}" font-size="10.5" fill="var(--acc)" font-weight="800">TV</text>`;
+  // tolerance bars (bottom of plot)
+  const zb=(Z,lab,col,yv)=>{ const a=X(Z[0]), b=X(Z[1]), y=Y(yv);
+    return `<rect x="${a}" y="${pt}" width="${Math.max(2,b-a)}" height="${pb-pt}" fill="${col}" opacity=".06"/>
+      <line x1="${a}" x2="${b}" y1="${y}" y2="${y}" stroke="var(--best)" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+      <line x1="${a}" x2="${a}" y1="${y-6}" y2="${y+6}" stroke="var(--best)" stroke-width="1.5"/><line x1="${b}" x2="${b}" y1="${y-6}" y2="${y+6}" stroke="var(--best)" stroke-width="1.5"/>
+      <text x="${b+8}" y="${y+4}" font-size="10.5" font-weight="800" fill="var(--best-ink)">${lab} 허용 구간 · OTT ${fP(Z[0])}~${fP(Z[1])}%</text>`; };
+  const yz1=y0+(y1-y0)*.17, yz3=y0+(y1-y0)*.07;
+  s+=zb(Z1,'Reach 1+','#56a274',yz1)+zb(Z3,'Reach 3+','#56a274',yz3);
+  // series
+  const path=k=>G.map((g,i)=>`${i?'L':'M'}${X(g.share).toFixed(1)},${Y(Math.max(y0,g[k])).toFixed(1)}`).join('');
+  s+=`<g clip-path="url(#cp)"><path d="${path('u1')}L${X(100)},${pb}L${X(0)},${pb}Z" fill="url(#ga)"/>
+    <path d="${path('u3')}" fill="none" stroke="var(--u3)" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="${path('u1')}" fill="none" stroke="var(--u1)" stroke-width="3.2" stroke-linejoin="round"/></g>`;
+  // optimum markers
+  const om=(g,k,above)=>{ const ox=X(g.share), oy=Y(g[k]); const right = !(mx>ox && mx-ox<150) ; const lx=right?ox+10:ox-10;
+    return `<circle cx="${ox}" cy="${oy}" r="6.5" fill="#fff" stroke="var(--best)" stroke-width="2.5"/><circle cx="${ox}" cy="${oy}" r="2.4" fill="var(--best)"/>
+      <text x="${lx}" y="${above?oy-11:oy+19}" text-anchor="${right?'start':'end'}" font-size="11" font-weight="800" fill="var(--best-ink)">${k==='u1'?'1+':'3+'} 최적 ${fP(100-g.share)}:${fP(g.share)} · ${f1(g[k])}%</text>`; };
+  s+=om(OPT1,'u1',true)+om(OPT3,'u3',false);
+  // me
+  s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb}" stroke="var(--me)" stroke-width="2"/>
+    <circle cx="${mx}" cy="${Y(me.u3)}" r="5.5" fill="var(--me)" stroke="#fff" stroke-width="2.5"/><circle cx="${mx}" cy="${Y(me.u1)}" r="7" fill="var(--me)" stroke="#fff" stroke-width="2.8"/>
+    <rect x="${mx-33}" y="${pb+4}" width="66" height="21" rx="10.5" fill="var(--me)"/><text x="${mx}" y="${pb+18.5}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">OTT ${fP(S.share)}%</text>
+    <rect x="${mx-33}" y="${pt-25}" width="66" height="21" rx="10.5" fill="var(--me)"/><text x="${mx}" y="${pt-10.5}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">TV ${fP(100-S.share)}%</text>`;
+  // hover layer
+  s+=`<g id="hov" visibility="hidden"><line id="hl" y1="${pt}" y2="${pb}" stroke="#1e2a38" stroke-opacity=".35" stroke-dasharray="3 3"/><circle id="h1" r="5" fill="#fff" stroke="var(--u1)" stroke-width="2.5"/><circle id="h3" r="4.5" fill="#fff" stroke="var(--u3)" stroke-width="2.5"/></g>`;
+  svg.innerHTML=s;
+  // pinned callout
+  const co=$('callout');
+  co.innerHTML=`<div class="h"><i></i>내 플랜</div><div class="mix num">${mixTxt(S.share)}</div><div class="won num">TV ${eokTxt(me.t*EOK)} · OTT ${eokTxt(me.o*EOK)}</div>
+    <div class="row"><span>Reach 1+</span><span><b class="num">${f1(me.u1)}%</b><em class="num">${signed(me.u1-BASE.u1)}</em></span></div>
+    <div class="row"><span>Reach 3+</span><span><b class="num">${f1(me.u3)}%</b><em class="num">${signed(me.u3-BASE.u3)}</em></span></div>`;
+  placeCard(co, mx, Y(me.u3)+44);
+  co.classList.toggle('dim',hovering);
+  $('cNote').textContent= B()>TV_MAX_OBS ? `TV 189억 초과(OTT ${fP((B()-TV_MAX_OBS)/B()*100)}% 미만)는 TV 곡선 외삽 구간` : '';
+}
+function placeCard(el, x, top){
+  const {W,m,H}=SC, cw=el.offsetWidth, ch=el.offsetHeight;
+  let left=x+16; if(left+cw>W-m.r-2) left=x-16-cw; left=Math.max(m.l+2,left);
+  el.style.left=left+'px'; el.style.top=Math.max(m.t+4,Math.min(top,H-m.b-ch-8))+'px';
+}
+/* interaction: hover card follows the curve, click/drag sets share */
+(function(){
+  const svg=$('svg'), hc=$('hcard'); let drag=false;
+  const shareAt=e=>{ const r=svg.getBoundingClientRect(), px=(e.clientX-r.left)*(SC.W/r.width); const v=(px-SC.m.l)/(SC.W-SC.m.l-SC.m.r)*100; return Math.max(0,Math.min(100,Math.round(v*2)/2)); };
+  function hover(v){
+    const g=calc(v), x=SC.X(v);
+    const hv=document.getElementById('hov'); if(!hv) return; hv.setAttribute('visibility','visible');
+    document.getElementById('hl').setAttribute('x1',x); document.getElementById('hl').setAttribute('x2',x);
+    const c1=document.getElementById('h1'), c3=document.getElementById('h3');
+    c1.setAttribute('cx',x); c1.setAttribute('cy',SC.Y(g.u1)); c3.setAttribute('cx',x); c3.setAttribute('cy',SC.Y(g.u3));
+    const sg=d=>{ const r=Math.round(d*10)/10; return r>0?`<em>▲${r.toFixed(1)}%p</em>`:r<0?`<em class="dn">▼${Math.abs(r).toFixed(1)}%p</em>`:`<em>±0.0%p</em>`; };
+    const tag = Math.abs(v-OPT1.share)<1e-9 ? ' · Reach 1+ 최적' : Math.abs(v-OPT3.share)<1e-9 ? ' · Reach 3+ 최적' : (v>=Z1[0]&&v<=Z1[1]?' · 1+ 허용 구간':'');
+    hc.innerHTML=`<div class="t num">${mixTxt(v)}</div><div class="w num">TV ${eokTxt(g.t*EOK)} · OTT ${eokTxt(g.o*EOK)}${tag}</div>
+      <div class="r"><span>Reach 1+</span><span><b class="num">${f1(g.u1)}%</b>${sg(g.u1-BASE.u1)}</span></div>
+      <div class="r"><span>Reach 3+</span><span><b class="num">${f1(g.u3)}%</b>${sg(g.u3-BASE.u3)}</span></div>
+      <div class="r sub"><span>TV 단독 1+ / 3+</span><b class="num">${f1(g.tv1)}% / ${f1(g.tv3)}%</b></div>
+      <div class="r sub"><span>OTT 단독 1+ / 3+</span><b class="num">${f1(g.o1)}% / ${f1(g.o3)}%</b></div>
+      <div class="f">클릭하면 이 비중으로 바뀝니다 · ▲▼는 TV 단독 대비</div>`;
+    placeCard(hc, x, SC.Y(g.u3)+44); hc.style.opacity=1;
+  }
+  svg.addEventListener('pointerdown',e=>{ drag=true; svg.setPointerCapture(e.pointerId); S.share=shareAt(e); render(); hover(S.share); });
+  svg.addEventListener('pointerup',()=>drag=false);
+  svg.addEventListener('pointermove',e=>{ const v=shareAt(e); if(!hovering){ hovering=true; $('callout').classList.add('dim'); }
+    if(drag && v!==S.share){ S.share=v; render(); } hover(v); });
+  svg.addEventListener('pointerleave',()=>{ if(drag) return; hovering=false; hc.style.opacity=0; $('callout').classList.remove('dim'); const h=document.getElementById('hov'); if(h) h.setAttribute('visibility','hidden'); });
+})();
+
+/* ---------- table ---------- */
+function drawTable(me){
+  const set=new Map(); const add=v=>set.set(Math.round(v*1e6)/1e6, true);
+  for(let v=0; v<=100+1e-9; v+=S.step) add(v); add(S.share); add(OPT1.share); add(OPT3.share);
+  const rows=[...set.keys()].sort((a,b)=>a-b).map(calc);
+  const isMe=r=>Math.abs(r.share-S.share)<1e-6;
+  let h=`<thead><tr><th rowspan="2" style="width:190px">구분 (TV : OTT)</th><th colspan="2" class="bl">예산 (억)</th><th colspan="5" class="bl">Reach 1+ (%)</th><th colspan="5" class="bl">Reach 3+ (%)</th></tr>
+  <tr class="g"><th class="bl">TV</th><th>OTT</th><th class="bl">TV 단독</th><th>OTT 단독</th><th>TV+OTT</th><th>TV 단독 대비</th><th>최적 대비</th><th class="bl">TV 단독</th><th>OTT 단독</th><th>TV+OTT</th><th>TV 단독 대비</th><th>최적 대비</th></tr></thead><tbody>`;
+  const meIdx=rows.findIndex(isMe);
+  const vsOpt=(r,k,O,Z)=>{ if(Math.abs(r.share-O.share)<1e-9) return '<span class="up" style="font-weight:800">최적</span>';
+    const inZ=r.share>=Z[0]-1e-9&&r.share<=Z[1]+1e-9; return signed2(r[k]-O[k])+'%p'+(inZ?'<span class="pill zone">허용</span>':''); };
+  rows.forEach((r,i)=>{
+    let pills=''; if(isMe(r)) pills+='<span class="pill me">내 플랜</span>';
+    if(Math.abs(r.share-OPT1.share)<1e-9) pills+='<span class="pill best">1+ 최적</span>'; if(Math.abs(r.share-OPT3.share)<1e-9) pills+='<span class="pill best">3+ 최적</span>';
+    h+=`<tr data-s="${r.share}" class="${isMe(r)?'me-row':''}${i===meIdx-1?' before-me':''}">
+      <td class="c num">${fP(100-r.share)} : ${fP(r.share)}${pills}</td>
+      <td class="num bl">${fE(r.t)}</td><td class="num">${fE(r.o)}</td>
+      <td class="num bl">${f1(r.tv1)}</td><td class="num">${f1(r.o1)}</td><td class="num u ${Math.abs(r.share-OPT1.share)<1e-9?'bestcell':''}">${f1(r.u1)}</td><td class="num">${r.share===0?'<span class="mut">기준</span>':signed(r.u1-BASE.u1)}</td><td class="num">${vsOpt(r,'u1',OPT1,Z1)}</td>
+      <td class="num bl">${f1(r.tv3)}</td><td class="num">${f1(r.o3)}</td><td class="num u ${Math.abs(r.share-OPT3.share)<1e-9?'bestcell':''}">${f1(r.u3)}</td><td class="num">${r.share===0?'<span class="mut">기준</span>':signed(r.u3-BASE.u3)}</td><td class="num">${vsOpt(r,'u3',OPT3,Z3)}</td></tr>`;
+  });
+  $('tbl').innerHTML=h+'</tbody>';
+  $('tbl').querySelectorAll('tbody tr').forEach(tr=>tr.onclick=()=>{ S.share=+tr.dataset.s; render(); });
+}
+
+let rz; addEventListener('resize',()=>{clearTimeout(rz); rz=setTimeout(render,80);});
+render(); document.fonts.ready.then(render);
+</script>
+</body>
+</html>
