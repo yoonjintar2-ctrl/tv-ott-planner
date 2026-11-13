@@ -117,8 +117,13 @@ button.kpi.cur:hover{border-color:var(--line);box-shadow:0 1px 2px rgba(20,30,45
 .c-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .c-head h3{margin:0;font-size:14.5px;font-weight:800}
 .c-head p{margin:2px 0 0;font-size:11.5px;color:var(--muted);font-weight:600}
-.legend{display:flex;gap:14px;margin-left:auto;align-items:center}
-.lg{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--ink2)}
+.legend{display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.legend .lh{font-size:11px;color:var(--muted);font-weight:600;margin-right:2px}
+.lg{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--ink2);border:1px solid var(--line);background:#fff;border-radius:99px;padding:5px 12px 5px 10px}
+.lg:hover{border-color:#c9cfd6}
+.lg.off{opacity:.38}
+.lg.off svg{filter:grayscale(1)}
+.lg .me-dot{width:10px;height:10px;border-radius:50%;background:var(--me);box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--me)}
 .lg svg{display:block}
 .plot{position:relative;margin-top:8px}
 .plot svg{display:block;width:100%;user-select:none;touch-action:none}
@@ -297,8 +302,10 @@ tbody tr:hover td{background:#fafbfc}
       <div class="c-head">
         <div><h3>비중별 예상 도달률</h3><p id="cSub"></p></div>
         <div class="legend">
-          <span class="lg"><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--u1)" stroke-width="3.2" stroke-linecap="round"/></svg>Reach 1+</span>
-          <span class="lg"><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--u3)" stroke-width="2.6" stroke-linecap="round"/></svg>Reach 3+</span>
+          <span class="lh">눌러서 켜고 끄기</span>
+          <button class="lg" data-k="u1"><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--u1)" stroke-width="3.2" stroke-linecap="round"/></svg>Reach 1+</button>
+          <button class="lg" data-k="u3"><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--u3)" stroke-width="2.6" stroke-linecap="round"/></svg>Reach 3+</button>
+          <button class="lg" data-k="me"><span class="me-dot"></span>내 플랜</button>
         </div>
       </div>
       <div class="plot" id="plot"><svg id="svg"></svg><div class="callout" id="callout"></div><div class="hcard" id="hcard"></div></div>
@@ -329,7 +336,7 @@ let AXV = 1;
 const TV_MAX_OBS = 189.2, OTT_MAX = 30, EOK = 1e8, TOL_DEFAULT = 0.2;
 
 /* budget is kept in 원; share = OTT 비중(%) */
-const S = { won:200*EOK, share:20, mix:'nf80', lam:1.08, tvc:'base', tol:TOL_DEFAULT, step:5 };
+const S = { won:200*EOK, share:20, mix:'nf80', lam:1.08, tvc:'base', tol:TOL_DEFAULT, step:5, show:{u1:true,u3:true,me:true} };
 const B = () => S.won/EOK;
 
 const hill = (b,[R,k,h]) => b<=0 ? 0 : Math.min(100, R*Math.pow(b,h)/(Math.pow(k,h)+Math.pow(b,h)));
@@ -366,6 +373,9 @@ const digits=s=>parseFloat(String(s).replace(/[^\d.]/g,''))||0;
 /* ---------- inputs ---------- */
 const $=id=>document.getElementById(id);
 function segBind(id,key,conv=v=>v){ $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ $(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); S[key]=conv(b.dataset.v); render(); }); }
+document.querySelectorAll('.legend .lg').forEach(b=>b.onclick=()=>{ const k=b.dataset.k;
+  if(k!=='me' && S.show[k] && !S.show[k==='u1'?'u3':'u1']) return; // keep at least one curve
+  S.show[k]=!S.show[k]; render(); });
 segBind('ottMix','mix'); segBind('lam','lam',Number); segBind('tvc','tvc'); segBind('step','step',Number);
 $('slider').oninput=e=>{ S.share=100-(+e.target.value); render(); };
 
@@ -443,6 +453,7 @@ function render(){
   $('kb3v').innerHTML=optV(OPT3); $('kb3s').innerHTML=`Reach 3+ <b>${f1(OPT3.u3)}%</b>`+(isCur(OPT3)?' · <b class="up">현재 적용 중</b>':'');
   $('kb1').classList.toggle('cur',isCur(OPT1)); $('kb3').classList.toggle('cur',isCur(OPT3));
   $('cSub').textContent=`총 ${eokTxt(S.won)} 원 · 위 축은 TV, 아래 축은 OTT 비중 · 파란 선이 내가 설정한 비중`;
+  document.querySelectorAll('.legend .lg').forEach(b=>b.classList.toggle('off',!S.show[b.dataset.k]));
   drawChart(me); drawTable(me);
 }
 
@@ -453,7 +464,7 @@ function drawChart(me){
   const svg=$('svg'), W=$('plot').clientWidth, MT=AXV===1?98:AXV===4?102:110, m={l:58,r:16,t:MT,b:MT}, H=MT*2+356, PX=26;
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H);
   const x0=0,x1=100;
-  let lo=Math.min(...G.flatMap(g=>[g.u1,g.u3])), hi=Math.max(...G.flatMap(g=>[g.u1,g.u3]));
+  const KS=['u1','u3'].filter(k=>S.show[k]), SH=S.show; let lo=Math.min(...G.flatMap(g=>KS.map(k=>g[k]))), hi=Math.max(...G.flatMap(g=>KS.map(k=>g[k])));
   const step=niceStep(Math.max(hi-lo,2),5); let y0=Math.floor(lo/step)*step; if(lo-y0<step*.3) y0-=step; y0=Math.max(0,y0);
   let y1=Math.min(100,Math.ceil((hi+(hi-y0)*.05)/step)*step);
   const X=v=>m.l+PX+(v-x0)/(x1-x0)*(W-m.l-m.r-2*PX), Y=v=>m.t+(1-(v-y0)/(y1-y0))*(H-m.t-m.b);
@@ -485,7 +496,7 @@ function drawChart(me){
   const nm=(t,y,col,an,x)=>`<text x="${x}" y="${y}" text-anchor="${an}" font-size="22" font-weight="900" letter-spacing="1" fill="${col}">${t}</text>`;
   if(V===5) s+=nm('TV ◀',C.nT,'var(--acc)','start',bx)+nm('▶ OTT',C.nO,'var(--ott)','end',bx+bw);
   else s+=nm('TV',C.nT,'var(--acc)','middle',bx+bw/2)+nm('OTT',C.nO,'var(--ott)','middle',bx+bw/2);
-  const near=x=>Math.abs(x-mx)<36, on=V===1;
+  const near=x=>S.show.me && Math.abs(x-mx)<36, on=V===1;
   for(let v=0; v<=100; v+=10){ const x=X(v), hide=near(x)?'opacity="0"':'';
     const sT=V===7?15-5*v/100:11.5, sO=V===7?10+5*v/100:11.5, wT=V===7?11.5-3*v/100:10.5, wO=V===7?8.5+3*v/100:10.5;
     s+=`<text x="${x}" y="${C.tW}" text-anchor="middle" font-size="${wT}" fill="${on?'rgba(255,255,255,.75)':'#7d8c9b'}" font-weight="600" ${hide}>${fE(B()*(100-v)/100)}억</text>
@@ -499,22 +510,23 @@ function drawChart(me){
       <line x1="${a}" x2="${a}" y1="${y-6}" y2="${y+6}" stroke="var(--best)" stroke-width="1.5"/><line x1="${b}" x2="${b}" y1="${y-6}" y2="${y+6}" stroke="var(--best)" stroke-width="1.5"/>
       <text x="${b+8}" y="${y+4}" font-size="10.5" font-weight="800" fill="var(--best-ink)">${lab} 허용 구간 · OTT ${fP(Z[0])}~${fP(Z[1])}%</text>`; };
   const yz1=y0+(y1-y0)*.17, yz3=y0+(y1-y0)*.07;
-  s+=zb(Z1,'Reach 1+','#56a274',yz1)+zb(Z3,'Reach 3+','#56a274',yz3);
+  if(SH.u1) s+=zb(Z1,'Reach 1+','#56a274',SH.u3?yz1:yz3); if(SH.u3) s+=zb(Z3,'Reach 3+','#56a274',yz3);
   // series
   const path=k=>G.map((g,i)=>`${i?'L':'M'}${X(g.share).toFixed(1)},${Y(Math.max(y0,g[k])).toFixed(1)}`).join('');
-  s+=`<g clip-path="url(#cp)"><path d="${path('u1')}L${X(100)},${pb}L${X(0)},${pb}Z" fill="#354758" fill-opacity=".06"/>
-    <path d="${path('u3')}" fill="none" stroke="var(--u3)" stroke-width="2.6" stroke-linejoin="round"/>
-    <path d="${path('u1')}" fill="none" stroke="var(--u1)" stroke-width="3.2" stroke-linejoin="round"/></g>`;
+  s+=`<g clip-path="url(#cp)"><path d="${path(SH.u1?'u1':'u3')}L${X(100)},${pb}L${X(0)},${pb}Z" fill="#354758" fill-opacity=".06"/>
+    ${SH.u3?`<path d="${path('u3')}" fill="none" stroke="var(--u3)" stroke-width="2.6" stroke-linejoin="round"/>`:''}
+    ${SH.u1?`<path d="${path('u1')}" fill="none" stroke="var(--u1)" stroke-width="3.2" stroke-linejoin="round"/>`:''}</g>`;
   // optimum markers
-  const om=(g,k,above)=>{ const ox=X(g.share), oy=Y(g[k]); const right=!(mx>ox && mx-ox<104); const lx=right?ox+9:ox-9, an=right?'start':'end';
-    const ya=above?oy-25:oy+21, yb=above?oy-11:oy+35, halo='stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"';
+  const om=(g,k,above)=>{ const ox=X(g.share), oy=Y(g[k]); const right=!(SH.me && mx>ox && mx-ox<118); const lx=right?ox+9:ox-9, an=right?'start':'end';
+    const ya=above?oy-39:oy+21, yb=above?oy-25:oy+35, yc=above?oy-11:oy+49, halo='stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"';
     return `<circle cx="${ox}" cy="${oy}" r="6.5" fill="#fff" stroke="var(--best)" stroke-width="2.5"/><circle cx="${ox}" cy="${oy}" r="2.4" fill="var(--best)"/>
       <text x="${lx}" y="${ya}" text-anchor="${an}" font-size="10.5" font-weight="800" fill="var(--best-ink)" ${halo}>${k==='u1'?'Reach 1+':'Reach 3+'} 최적</text>
-      <text x="${lx}" y="${yb}" text-anchor="${an}" font-size="11" font-weight="800" fill="var(--best-ink)" ${halo}>TV ${fP(100-g.share)} : OTT ${fP(g.share)}</text>`; };
-  s+=om(OPT1,'u1',true)+om(OPT3,'u3',false);
-  // me
-  s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb}" stroke="var(--me)" stroke-width="2"/>
-    <circle cx="${mx}" cy="${Y(me.u3)}" r="5.5" fill="var(--me)" stroke="#fff" stroke-width="2.5"/><circle cx="${mx}" cy="${Y(me.u1)}" r="7" fill="var(--me)" stroke="#fff" stroke-width="2.8"/>
+      <text x="${lx}" y="${yb}" text-anchor="${an}" font-size="11" font-weight="800" fill="var(--best-ink)" ${halo}>TV ${fP(100-g.share)} : OTT ${fP(g.share)}</text>
+      <text x="${lx}" y="${yc}" text-anchor="${an}" font-size="10.5" font-weight="700" fill="var(--best-ink)" ${halo}>TV ${eokTxt(g.t*EOK)} · OTT ${eokTxt(g.o*EOK)}</text>`; };
+  if(SH.u1) s+=om(OPT1,'u1',true); if(SH.u3) s+=om(OPT3,'u3',!SH.u1);
+ // me
+  if(SH.me) s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb}" stroke="var(--me)" stroke-width="2"/>
+    ${SH.u3?`<circle cx="${mx}" cy="${Y(me.u3)}" r="5.5" fill="var(--me)" stroke="#fff" stroke-width="2.5"/>`:''}${SH.u1?`<circle cx="${mx}" cy="${Y(me.u1)}" r="7" fill="var(--me)" stroke="#fff" stroke-width="2.8"/>`:''}
     <rect x="${mx-36}" y="${C.pB}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${C.pB+15}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">OTT ${fP(S.share)}%</text>
     <rect x="${mx-36}" y="${C.pT}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${C.pT+15}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">TV ${fP(100-S.share)}%</text>`;
   // hover layer
@@ -525,7 +537,8 @@ function drawChart(me){
   co.innerHTML=`<div class="h"><i></i>내 플랜</div><div class="mix num">${mixHtml(S.share)}</div><div class="won num">TV ${eokTxt(me.t*EOK)} · OTT ${eokTxt(me.o*EOK)}</div>
     <div class="row"><span>Reach 1+</span><span><b class="num">${f1(me.u1)}%</b><em class="num">${signed(me.u1-BASE.u1)}</em></span></div>
     <div class="row"><span>Reach 3+</span><span><b class="num">${f1(me.u3)}%</b><em class="num">${signed(me.u3-BASE.u3)}</em></span></div>`;
-  placeCard(co, mx, Y(me.u3)+44);
+  co.style.display=SH.me?'block':'none';
+  placeCard(co, mx, Y(SH.u3?me.u3:me.u1)+44);
   co.classList.toggle('dim',hovering);
   $('cNote').textContent= B()>TV_MAX_OBS ? `TV 189억 초과(OTT ${fP((B()-TV_MAX_OBS)/B()*100)}% 미만)는 TV 곡선 외삽 구간` : '';
 }
@@ -544,6 +557,7 @@ function placeCard(el, x, top){
     document.getElementById('hl').setAttribute('x1',x); document.getElementById('hl').setAttribute('x2',x);
     const c1=document.getElementById('h1'), c3=document.getElementById('h3');
     c1.setAttribute('cx',x); c1.setAttribute('cy',SC.Y(g.u1)); c3.setAttribute('cx',x); c3.setAttribute('cy',SC.Y(g.u3));
+    c1.setAttribute('visibility',S.show.u1?'inherit':'hidden'); c3.setAttribute('visibility',S.show.u3?'inherit':'hidden');
     const sg=d=>{ const r=Math.round(d*10)/10; return r>0?`<em>▲${r.toFixed(1)}%p</em>`:r<0?`<em class="dn">▼${Math.abs(r).toFixed(1)}%p</em>`:`<em>±0.0%p</em>`; };
     const tag = Math.abs(v-OPT1.share)<1e-9 ? ' · Reach 1+ 최적' : Math.abs(v-OPT3.share)<1e-9 ? ' · Reach 3+ 최적' : (v>=Z1[0]&&v<=Z1[1]?' · 1+ 허용 구간':'');
     hc.innerHTML=`<div class="t num">${mixHtml(v)}</div><div class="w num">TV ${eokTxt(g.t*EOK)} · OTT ${eokTxt(g.o*EOK)}${tag}</div>
@@ -552,7 +566,7 @@ function placeCard(el, x, top){
       <div class="r sub"><span>TV 단독 1+ / 3+</span><b class="num">${f1(g.tv1)}% / ${f1(g.tv3)}%</b></div>
       <div class="r sub"><span>OTT 단독 1+ / 3+</span><b class="num">${f1(g.o1)}% / ${f1(g.o3)}%</b></div>
       <div class="f">클릭하면 이 비중으로 바뀝니다 · ▲▼는 TV 단독 대비</div>`;
-    placeCard(hc, x, SC.Y(g.u3)+44); hc.style.opacity=1;
+    placeCard(hc, x, SC.Y(S.show.u3?g.u3:g.u1)+44); hc.style.opacity=1;
   }
   svg.addEventListener('pointerdown',e=>{ drag=true; svg.setPointerCapture(e.pointerId); S.share=shareAt(e); render(); hover(S.share); });
   svg.addEventListener('pointerup',()=>drag=false);
