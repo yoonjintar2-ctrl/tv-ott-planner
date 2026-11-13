@@ -450,7 +450,7 @@ function render(){
 function niceStep(range,n){ const raw=range/n, p=Math.pow(10,Math.floor(Math.log10(raw))); for(const m of [1,2,2.5,5,10]) if(m*p>=raw) return m*p; return 10*p; }
 let SC=null, hovering=false;
 function drawChart(me){
-  const svg=$('svg'), W=$('plot').clientWidth, H=520, m={l:58,r:16,t:80,b:80}, PX=26;
+  const svg=$('svg'), W=$('plot').clientWidth, MT=AXV===1?98:AXV===4?102:110, m={l:58,r:16,t:MT,b:MT}, H=MT*2+356, PX=26;
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H);
   const x0=0,x1=100;
   let lo=Math.min(...G.flatMap(g=>[g.u1,g.u3])), hi=Math.max(...G.flatMap(g=>[g.u1,g.u3]));
@@ -468,27 +468,30 @@ function drawChart(me){
       s+=`<line x1="${ex}" x2="${ex}" y1="${pt}" y2="${pb}" stroke="#b9c1c9" stroke-dasharray="2 3"/><text transform="translate(${tx},${ty}) rotate(-90)" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600">OTT 곡선 실측 끝 ${OTT_MAX}억 →</text>`; } }
   // grid + y labels
   for(let v=y0; v<=y1+1e-9; v+=step){ const y=Y(v); s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="#e6e9ec"/><text x="${m.l-9}" y="${y+3.5}" text-anchor="end" font-size="11" fill="var(--muted)" font-weight="600">${+v.toFixed(1)}%</text>`; }
-  // x axes: top = TV (navy), bottom = OTT (orange); bands stay inside the plot column
-  // AXV 1 = solid bands · AXV 4 = tapered bands (TV thins to the right, OTT thickens)
-  const tt=pt-40, tb=pt-6, bt=pb+6, bb=pb+40, bx=m.l, bw=W-m.l-m.r, HMAX=tb-tt, HMIN=AXV===4?5:HMAX;
-  const hTV=v=>HMAX-(HMAX-HMIN)*v/100, hOTT=v=>HMIN+(HMAX-HMIN)*v/100;
-  if(AXV===4){ // wedges hug the plot edge; labels sit on white so they never straddle the slope
-    const WMAX=16, WMIN=3;
-    s+=`<path d="M${bx},${pt-1} L${bx},${pt-1-WMAX+5} Q${bx},${pt-1-WMAX} ${bx+5},${pt-1-WMAX} L${bx+bw},${pt-1-WMIN} L${bx+bw},${pt-1}Z" fill="var(--acc)"/>
+  // x axes: top = TV (navy), bottom = OTT (orange); everything stays inside the plot column
+  //  1 = solid bands · 4 = thin wedge · 5 = thick wedge, names at the thick ends · 6 = stepped blocks · 7 = wedge + labels that grow/shrink
+  const bx=m.l, bw=W-m.l-m.r, V=AXV;
+  const C = V===1 ? {tW:pt-26,tP:pt-12,oP:pb+21,oW:pb+35,nT:pt-62,nO:pb+80}
+          : V===4 ? {tW:pt-38,tP:pt-23,oP:pb+32,oW:pb+46,nT:pt-68,nO:pb+86}
+          :         {tW:pt-50,tP:pt-34,oP:pb+44,oW:pb+59,nT:pt-78,nO:pb+96};
+  C.pT=C.tP-15; C.pB=C.oP-15;
+  const wedge=(WMAX,WMIN)=>`<path d="M${bx},${pt-1} L${bx},${pt-1-WMAX+5} Q${bx},${pt-1-WMAX} ${bx+5},${pt-1-WMAX} L${bx+bw},${pt-1-WMIN} L${bx+bw},${pt-1}Z" fill="var(--acc)"/>
       <path d="M${bx},${pb+1} L${bx+bw},${pb+1} L${bx+bw},${pb+1+WMAX-5} Q${bx+bw},${pb+1+WMAX} ${bx+bw-5},${pb+1+WMAX} L${bx},${pb+1+WMIN}Z" fill="var(--ott)"/>`;
-  } else {
-    s+=`<rect x="${bx}" y="${tt}" width="${bw}" height="${HMAX}" rx="8" fill="var(--acc)"/><rect x="${bx}" y="${bt}" width="${bw}" height="${HMAX}" rx="8" fill="var(--ott)"/>`;
-  }
-  s+=`<text x="${bx+bw/2}" y="${AXV===4?pt-57:tt-11}" text-anchor="middle" font-size="22" font-weight="900" letter-spacing="1" fill="var(--acc)">TV</text>
-    <text x="${bx+bw/2}" y="${AXV===4?pb+73:bb+28}" text-anchor="middle" font-size="22" font-weight="900" letter-spacing="1" fill="var(--ott)">OTT</text>`;
-  const near=x=>Math.abs(x-mx)<36;
-  // a label is white while the band still covers its centre, coloured once the band has thinned out
+  if(V===1) s+=`<rect x="${bx}" y="${pt-40}" width="${bw}" height="34" rx="8" fill="var(--acc)"/><rect x="${bx}" y="${pb+6}" width="${bw}" height="34" rx="8" fill="var(--ott)"/>`;
+  else if(V===4) s+=wedge(16,3);
+  else if(V===5||V===7) s+=wedge(26,3);
+  else if(V===6){ for(let q=0;q<100;q+=10){ const a=X(q)+1.5, w=X(q+10)-X(q)-3, c=q+5, ht=Math.max(3,26*(100-c)/100), ho=Math.max(3,26*c/100);
+      s+=`<rect x="${a}" y="${pt-1-ht}" width="${w}" height="${ht}" rx="3" fill="var(--acc)"/><rect x="${a}" y="${pb+1}" width="${w}" height="${ho}" rx="3" fill="var(--ott)"/>`; } }
+  const nm=(t,y,col,an,x)=>`<text x="${x}" y="${y}" text-anchor="${an}" font-size="22" font-weight="900" letter-spacing="1" fill="${col}">${t}</text>`;
+  if(V===5) s+=nm('TV ◀',C.nT,'var(--acc)','start',bx)+nm('▶ OTT',C.nO,'var(--ott)','end',bx+bw);
+  else s+=nm('TV',C.nT,'var(--acc)','middle',bx+bw/2)+nm('OTT',C.nO,'var(--ott)','middle',bx+bw/2);
+  const near=x=>Math.abs(x-mx)<36, on=V===1;
   for(let v=0; v<=100; v+=10){ const x=X(v), hide=near(x)?'opacity="0"':'';
-    const W4=AXV===4, yTW=W4?pt-38:tt+14, yTP=W4?pt-23:tb-6, yOP=W4?pb+32:bt+15, yOW=W4?pb+46:bb-6;
-    s+=`<text x="${x}" y="${yTW}" text-anchor="middle" font-size="10.5" fill="${W4?'#7d8c9b':'rgba(255,255,255,.75)'}" font-weight="600" ${hide}>${fE(B()*(100-v)/100)}억</text>
-      <text x="${x}" y="${yTP}" text-anchor="middle" font-size="11.5" fill="${W4?'#2f4458':'#fff'}" font-weight="800" ${hide}>${100-v}%</text>
-      <text x="${x}" y="${yOP}" text-anchor="middle" font-size="11.5" fill="${W4?'#8f5526':'#fff'}" font-weight="800" ${hide}>${v}%</text>
-      <text x="${x}" y="${yOW}" text-anchor="middle" font-size="10.5" fill="${W4?'#b08860':'rgba(255,255,255,.8)'}" font-weight="600" ${hide}>${fE(B()*v/100)}억</text>`; }
+    const sT=V===7?15-5*v/100:11.5, sO=V===7?10+5*v/100:11.5, wT=V===7?11.5-3*v/100:10.5, wO=V===7?8.5+3*v/100:10.5;
+    s+=`<text x="${x}" y="${C.tW}" text-anchor="middle" font-size="${wT}" fill="${on?'rgba(255,255,255,.75)':'#7d8c9b'}" font-weight="600" ${hide}>${fE(B()*(100-v)/100)}억</text>
+      <text x="${x}" y="${C.tP}" text-anchor="middle" font-size="${sT}" fill="${on?'#fff':'#2f4458'}" font-weight="800" ${hide}>${100-v}%</text>
+      <text x="${x}" y="${C.oP}" text-anchor="middle" font-size="${sO}" fill="${on?'#fff':'#8f5526'}" font-weight="800" ${hide}>${v}%</text>
+      <text x="${x}" y="${C.oW}" text-anchor="middle" font-size="${wO}" fill="${on?'rgba(255,255,255,.8)':'#b08860'}" font-weight="600" ${hide}>${fE(B()*v/100)}억</text>`; }
   // tolerance bars (bottom of plot)
   const zb=(Z,lab,col,yv)=>{ const a=X(Z[0]), b=X(Z[1]), y=Y(yv);
     return `<rect x="${a}" y="${pt}" width="${Math.max(2,b-a)}" height="${pb-pt}" fill="${col}" opacity=".06"/>
@@ -512,8 +515,8 @@ function drawChart(me){
   // me
   s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb}" stroke="var(--me)" stroke-width="2"/>
     <circle cx="${mx}" cy="${Y(me.u3)}" r="5.5" fill="var(--me)" stroke="#fff" stroke-width="2.5"/><circle cx="${mx}" cy="${Y(me.u1)}" r="7" fill="var(--me)" stroke="#fff" stroke-width="2.8"/>
-    <rect x="${mx-36}" y="${pb+12}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${pb+27}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">OTT ${fP(S.share)}%</text>
-    <rect x="${mx-36}" y="${pt-34}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${pt-19}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">TV ${fP(100-S.share)}%</text>`;
+    <rect x="${mx-36}" y="${C.pB}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${C.pB+15}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">OTT ${fP(S.share)}%</text>
+    <rect x="${mx-36}" y="${C.pT}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${C.pT+15}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">TV ${fP(100-S.share)}%</text>`;
   // hover layer
   s+=`<g id="hov" visibility="hidden"><line id="hl" y1="${pt}" y2="${pb}" stroke="#1e2a38" stroke-opacity=".35" stroke-dasharray="3 3"/><circle id="h1" r="5" fill="#fff" stroke="var(--u1)" stroke-width="2.5"/><circle id="h3" r="4.5" fill="#fff" stroke="var(--u3)" stroke-width="2.5"/></g>`;
   svg.innerHTML=s;
