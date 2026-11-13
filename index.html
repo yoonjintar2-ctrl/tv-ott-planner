@@ -461,12 +461,13 @@ function render(){
 function niceStep(range,n){ const raw=range/n, p=Math.pow(10,Math.floor(Math.log10(raw))); for(const m of [1,2,2.5,5,10]) if(m*p>=raw) return m*p; return 10*p; }
 let SC=null, hovering=false;
 function drawChart(me){
-  const svg=$('svg'), W=$('plot').clientWidth, MT=AXV===1?98:AXV===4?102:110, m={l:58,r:16,t:MT,b:MT}, H=MT*2+356, PX=26;
+  const svg=$('svg'), W=$('plot').clientWidth, MT=AXV===1?98:AXV===4?102:110, m={l:58,r:16,t:MT,b:MT}, H=MT*2+400, PX=26;
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H);
   const x0=0,x1=100;
   const KS=['u1','u3'].filter(k=>S.show[k]), SH=S.show; let lo=Math.min(...G.flatMap(g=>KS.map(k=>g[k]))), hi=Math.max(...G.flatMap(g=>KS.map(k=>g[k])));
   const step=niceStep(Math.max(hi-lo,2),5); let y0=Math.floor(lo/step)*step; if(lo-y0<step*.3) y0-=step; y0=Math.max(0,y0);
   let y1=Math.min(100,Math.ceil((hi+(hi-y0)*.05)/step)*step);
+  { const ph=H-m.t-m.b; while(y1+step<=100 && (y1-hi)/(y1-y0)*ph<64) y1+=step; }
   const X=v=>m.l+PX+(v-x0)/(x1-x0)*(W-m.l-m.r-2*PX), Y=v=>m.t+(1-(v-y0)/(y1-y0))*(H-m.t-m.b);
   SC={X,Y,x0,x1,m,W,H,PX};
   const mx=X(S.share), pb=H-m.b, pt=m.t;
@@ -517,13 +518,8 @@ function drawChart(me){
     ${SH.u3?`<path d="${path('u3')}" fill="none" stroke="var(--u3)" stroke-width="2.6" stroke-linejoin="round"/>`:''}
     ${SH.u1?`<path d="${path('u1')}" fill="none" stroke="var(--u1)" stroke-width="3.2" stroke-linejoin="round"/>`:''}</g>`;
   // optimum markers
-  const om=(g,k,above)=>{ const ox=X(g.share), oy=Y(g[k]); const right=!(SH.me && mx>ox && mx-ox<118); const lx=right?ox+9:ox-9, an=right?'start':'end';
-    const ya=above?oy-39:oy+21, yb=above?oy-25:oy+35, yc=above?oy-11:oy+49, halo='stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"';
-    return `<circle cx="${ox}" cy="${oy}" r="6.5" fill="#fff" stroke="var(--best)" stroke-width="2.5"/><circle cx="${ox}" cy="${oy}" r="2.4" fill="var(--best)"/>
-      <text x="${lx}" y="${ya}" text-anchor="${an}" font-size="10.5" font-weight="800" fill="var(--best-ink)" ${halo}>${k==='u1'?'Reach 1+':'Reach 3+'} 최적</text>
-      <text x="${lx}" y="${yb}" text-anchor="${an}" font-size="11" font-weight="800" fill="var(--best-ink)" ${halo}>TV ${fP(100-g.share)} : OTT ${fP(g.share)}</text>
-      <text x="${lx}" y="${yc}" text-anchor="${an}" font-size="10.5" font-weight="700" fill="var(--best-ink)" ${halo}>TV ${eokTxt(g.t*EOK)} · OTT ${eokTxt(g.o*EOK)}</text>`; };
-  if(SH.u1) s+=om(OPT1,'u1',true); if(SH.u3) s+=om(OPT3,'u3',!SH.u1);
+  const OPTS=[]; if(SH.u1) OPTS.push([OPT1,'u1']); if(SH.u3) OPTS.push([OPT3,'u3']);
+  OPTS.forEach(([g,k])=>{ s+=`<circle cx="${X(g.share)}" cy="${Y(g[k])}" r="6.5" fill="#fff" stroke="var(--best)" stroke-width="2.5"/><circle cx="${X(g.share)}" cy="${Y(g[k])}" r="2.4" fill="var(--best)"/>`; });
  // me
   if(SH.me) s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb}" stroke="var(--me)" stroke-width="2"/>
     ${SH.u3?`<circle cx="${mx}" cy="${Y(me.u3)}" r="5.5" fill="var(--me)" stroke="#fff" stroke-width="2.5"/>`:''}${SH.u1?`<circle cx="${mx}" cy="${Y(me.u1)}" r="7" fill="var(--me)" stroke="#fff" stroke-width="2.8"/>`:''}
@@ -538,8 +534,38 @@ function drawChart(me){
     <div class="row"><span>Reach 1+</span><span><b class="num">${f1(me.u1)}%</b><em class="num">${signed(me.u1-BASE.u1)}</em></span></div>
     <div class="row"><span>Reach 3+</span><span><b class="num">${f1(me.u3)}%</b><em class="num">${signed(me.u3-BASE.u3)}</em></span></div>`;
   co.style.display=SH.me?'block':'none';
-  placeCard(co, mx, Y(SH.u3?me.u3:me.u1)+44);
+  { const zTop=Y(SH.u1&&SH.u3?yz1:yz3)-12, want=Y(SH.u3?me.u3:me.u1)+44;
+    placeCard(co, mx, Math.max(pt+4, Math.min(want, zTop-co.offsetHeight-6))); }
   co.classList.toggle('dim',hovering);
+  // optimum labels: try 4 spots, keep each fully inside the plot and clear of 내 플랜 line/card and each other
+  const plotBox={l:m.l+2,r:W-m.r-2,t:pt+4,b:pb-4}, avoid=[];
+  if(SH.me){ avoid.push({l:mx-7,r:mx+7,t:pt,b:pb}); const cl=co.offsetLeft, ct=co.offsetTop; avoid.push({l:cl-6,r:cl+co.offsetWidth+6,t:ct-6,b:ct+co.offsetHeight+6}); }
+  const ctx=(drawChart._c||(drawChart._c=document.createElement('canvas').getContext('2d')));
+  const tw=(t,sz,wt)=>{ ctx.font=`${wt} ${sz}px Pretendard, sans-serif`; return ctx.measureText(t).width; };
+  const ov=(a,b)=>Math.max(0,Math.min(a.r,b.r)-Math.max(a.l,b.l))*Math.max(0,Math.min(a.b,b.b)-Math.max(a.t,b.t));
+  let lab='';
+  OPTS.forEach(([g,k])=>{
+    const ox=X(g.share), oy=Y(g[k]);
+    const L=[[`${k==='u1'?'Reach 1+':'Reach 3+'} 최적`,10.5,800],[`TV ${fP(100-g.share)} : OTT ${fP(g.share)}`,11,800],[`TV ${eokTxt(g.t*EOK)} · OTT ${eokTxt(g.o*EOK)}`,10.5,700]];
+    const w=Math.max(...L.map(l=>tw(...l)))+4, h=40;
+    const preferAbove = k==='u1' || !SH.u1;
+    const curvePts=[]; ['u1','u3'].forEach(kk=>{ if(SH[kk]) G.forEach(gg=>curvePts.push([X(gg.share),Y(gg[kk])])); });
+    let best=null;
+    [['a',10],['a',30],['b',12],['b',40],['b',70]].forEach(([v,gap])=>{ for(let f=0; f<=1.0001; f+=0.1){
+      const l=ox-9-w+f*(w+18), above=v==='a';
+      const box={l, r:l+w, t:above?oy-gap-h:oy+gap, b:above?oy-gap:oy+gap+h};
+      let score=(above===preferAbove?0:12)+Math.abs((box.l+box.r)/2-ox)*0.04+gap*0.4;
+      score+=(Math.max(0,plotBox.l-box.l)+Math.max(0,box.r-plotBox.r)+Math.max(0,plotBox.t-box.t)+Math.max(0,box.b-plotBox.b))*1000;
+      avoid.forEach(a=>score+=ov(box,a));
+      curvePts.forEach(([px,py])=>{ if(px>box.l-3&&px<box.r+3&&py>box.t-3&&py<box.b+3) score+=40; });
+      if(!best||score<best.score) best={score,box,above,gap};
+    } });
+    avoid.push(best.box);
+    const {box,above,gap}=best, x=box.l, an='start', halo='stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"';
+    if(gap>14){ const lx=Math.max(box.l+4,Math.min(box.r-4,ox)); lab+=`<line x1="${ox}" y1="${above?oy-8:oy+8}" x2="${lx}" y2="${above?box.b+1:box.t-1}" stroke="var(--best)" stroke-width="1.2" stroke-dasharray="2 2"/>`; }
+    L.forEach((l,ii)=>{ lab+=`<text x="${x}" y="${box.t+11+ii*13.5}" text-anchor="${an}" font-size="${l[1]}" font-weight="${l[2]}" fill="var(--best-ink)" ${halo}>${l[0]}</text>`; });
+  });
+  document.getElementById('hov').insertAdjacentHTML('beforebegin',lab);
   $('cNote').textContent= B()>TV_MAX_OBS ? `TV 189억 초과(OTT ${fP((B()-TV_MAX_OBS)/B()*100)}% 미만)는 TV 곡선 외삽 구간` : '';
 }
 function placeCard(el, x, top){
