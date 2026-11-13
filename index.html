@@ -325,6 +325,7 @@ tbody tr:hover td{background:#fafbfc}
 <script>
 const OTT = {"nf80":{"r1":[23.7,32.0743,36.8875,40.0817,42.3795,44.122,45.4942,46.6059,47.5269,48.3036,48.9684,49.5445,50.0489,50.4947,50.8918,51.248,51.5695,51.8612,52.1272,52.3709,52.595,52.8019,52.9935,53.1716,53.3376,53.4926,53.6378,53.7741,53.9023,54.0232],"r3":[8.7161,15.6256,20.8579,24.9266,28.1756,30.8296,33.0389,34.9076,36.5094,37.8984,39.1148,40.1893,41.1457,42.0027,42.7753,43.4755,44.1132,44.6965,45.2322,45.726,46.1826,46.6063,47.0004,47.3681,47.712,48.0342,48.3369,48.6218,48.8904,49.1442]},"nf100":{"r1":[21.3625,28.6791,32.8826,35.6869,37.718,39.2695,40.4998,41.5034,42.3399,43.0496,43.6604,44.1924,44.6605,45.0761,45.4478,45.7825,46.0857,46.3618,46.6144,46.8465,47.0607,47.2589,47.443,47.6145,47.7747,47.9247,48.0655,48.1979,48.3228,48.4407],"r3":[7.3591,13.3454,17.9305,21.5276,24.4217,26.8017,28.7947,30.4895,31.9494,33.2209,34.3389,35.3303,36.2157,37.0117,37.7313,38.3854,38.9826,39.5302,40.0343,40.5,40.9315,41.3326,41.7065,42.0559,42.3831,42.6903,42.9793,43.2517,43.5088,43.7521]}};
 const TV = { low:{r1:[91.9628,3.9447,0.7359],r3:[83.467,8.2665,0.9014]}, base:{r1:[92.8135,3.9086,0.7046],r3:[88.2141,9.3506,0.7904]}, high:{r1:[90.9841,3.7119,0.7532],r3:[94.4788,9.7313,0.6214]} };
+let AXV = 1;
 const TV_MAX_OBS = 189.2, OTT_MAX = 30, EOK = 1e8, TOL_DEFAULT = 0.2;
 
 /* budget is kept in 원; share = OTT 비중(%) */
@@ -441,7 +442,7 @@ function render(){
   $('kb1v').innerHTML=optV(OPT1); $('kb1s').innerHTML=`Reach 1+ <b>${f1(OPT1.u1)}%</b>`+(isCur(OPT1)?' · <b class="up">현재 적용 중</b>':'');
   $('kb3v').innerHTML=optV(OPT3); $('kb3s').innerHTML=`Reach 3+ <b>${f1(OPT3.u3)}%</b>`+(isCur(OPT3)?' · <b class="up">현재 적용 중</b>':'');
   $('kb1').classList.toggle('cur',isCur(OPT1)); $('kb3').classList.toggle('cur',isCur(OPT3));
-  $('cSub').innerHTML=`총 ${eokTxt(S.won)} 원 · <span class="axchip tv">위 축 TV</span> <span class="axchip ott">아래 축 OTT</span> 비중 · 파란 선이 내가 설정한 비중`;
+  $('cSub').textContent=`총 ${eokTxt(S.won)} 원 · 위 축은 TV, 아래 축은 OTT 비중 · 파란 선이 내가 설정한 비중`;
   drawChart(me); drawTable(me);
 }
 
@@ -449,14 +450,14 @@ function render(){
 function niceStep(range,n){ const raw=range/n, p=Math.pow(10,Math.floor(Math.log10(raw))); for(const m of [1,2,2.5,5,10]) if(m*p>=raw) return m*p; return 10*p; }
 let SC=null, hovering=false;
 function drawChart(me){
-  const svg=$('svg'), W=$('plot').clientWidth, H=500, m={l:76,r:22,t:74,b:66};
+  const svg=$('svg'), W=$('plot').clientWidth, H=520, m={l:58,r:16,t:80,b:80}, PX=26;
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H);
   const x0=0,x1=100;
   let lo=Math.min(...G.flatMap(g=>[g.u1,g.u3])), hi=Math.max(...G.flatMap(g=>[g.u1,g.u3]));
   const step=niceStep(Math.max(hi-lo,2),5); let y0=Math.floor(lo/step)*step; if(lo-y0<step*.3) y0-=step; y0=Math.max(0,y0);
   let y1=Math.min(100,Math.ceil((hi+(hi-y0)*.05)/step)*step);
-  const X=v=>m.l+(v-x0)/(x1-x0)*(W-m.l-m.r), Y=v=>m.t+(1-(v-y0)/(y1-y0))*(H-m.t-m.b);
-  SC={X,Y,x0,x1,m,W,H};
+  const X=v=>m.l+PX+(v-x0)/(x1-x0)*(W-m.l-m.r-2*PX), Y=v=>m.t+(1-(v-y0)/(y1-y0))*(H-m.t-m.b);
+  SC={X,Y,x0,x1,m,W,H,PX};
   const mx=X(S.share), pb=H-m.b, pt=m.t;
   let s=`<defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#354758" stop-opacity=".15"/><stop offset="1" stop-color="#354758" stop-opacity="0"/></linearGradient><clipPath id="cp"><rect x="${m.l}" y="${pt-3}" width="${W-m.l-m.r}" height="${pb-pt+3}"/></clipPath></defs>`;
   // OTT data-end region
@@ -467,23 +468,27 @@ function drawChart(me){
       s+=`<line x1="${ex}" x2="${ex}" y1="${pt}" y2="${pb}" stroke="#b9c1c9" stroke-dasharray="2 3"/><text transform="translate(${tx},${ty}) rotate(-90)" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600">OTT 곡선 실측 끝 ${OTT_MAX}억 →</text>`; } }
   // grid + y labels
   for(let v=y0; v<=y1+1e-9; v+=step){ const y=Y(v); s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="#e6e9ec"/><text x="${m.l-9}" y="${y+3.5}" text-anchor="end" font-size="11" fill="var(--muted)" font-weight="600">${+v.toFixed(1)}%</text>`; }
-  // x axes: top = TV band (navy), bottom = OTT band (orange), composition ribbon in between
-  const rb=pb+5, rh=12, bt=pb+21, bb=pb+57, tt=pt-41, tb=pt-5;
-  s+=`<rect x="4" y="${tt}" width="${W-m.r+12}" height="${tb-tt}" rx="9" fill="rgba(73,94,114,.08)"/>
-    <rect x="4" y="${bt}" width="${W-m.r+12}" height="${bb-bt}" rx="9" fill="rgba(201,138,74,.11)"/>
-    <line x1="${m.l}" x2="${W-m.r}" y1="${pt}" y2="${pt}" stroke="var(--acc)" stroke-width="2"/>
-    <rect x="10" y="${tt+8}" width="38" height="20" rx="10" fill="var(--acc)"/><text x="29" y="${tt+22}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">TV</text>
-    <rect x="10" y="${bt+8}" width="38" height="20" rx="10" fill="var(--ott)"/><text x="29" y="${bt+22}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">OTT</text>
-    <polygon points="${X(0)},${rb} ${X(100)},${rb} ${X(0)},${rb+rh}" fill="var(--acc)"/>
-    <polygon points="${X(100)},${rb} ${X(100)},${rb+rh} ${X(0)},${rb+rh}" fill="var(--ott)"/>
-    <text x="${X(0)+6}" y="${rb+9.5}" font-size="9.5" font-weight="800" fill="#fff">TV</text><text x="${X(100)-6}" y="${rb+9.5}" text-anchor="end" font-size="9.5" font-weight="800" fill="#fff">OTT</text>`;
+  // x axes: top = TV (navy), bottom = OTT (orange); bands stay inside the plot column
+  // AXV 1 = solid bands · AXV 4 = tapered bands (TV thins to the right, OTT thickens)
+  const tt=pt-40, tb=pt-6, bt=pb+6, bb=pb+40, bx=m.l, bw=W-m.l-m.r, HMAX=tb-tt, HMIN=AXV===4?5:HMAX;
+  const hTV=v=>HMAX-(HMAX-HMIN)*v/100, hOTT=v=>HMIN+(HMAX-HMIN)*v/100;
+  if(AXV===4){ // wedges hug the plot edge; labels sit on white so they never straddle the slope
+    const WMAX=16, WMIN=3;
+    s+=`<path d="M${bx},${pt-1} L${bx},${pt-1-WMAX+5} Q${bx},${pt-1-WMAX} ${bx+5},${pt-1-WMAX} L${bx+bw},${pt-1-WMIN} L${bx+bw},${pt-1}Z" fill="var(--acc)"/>
+      <path d="M${bx},${pb+1} L${bx+bw},${pb+1} L${bx+bw},${pb+1+WMAX-5} Q${bx+bw},${pb+1+WMAX} ${bx+bw-5},${pb+1+WMAX} L${bx},${pb+1+WMIN}Z" fill="var(--ott)"/>`;
+  } else {
+    s+=`<rect x="${bx}" y="${tt}" width="${bw}" height="${HMAX}" rx="8" fill="var(--acc)"/><rect x="${bx}" y="${bt}" width="${bw}" height="${HMAX}" rx="8" fill="var(--ott)"/>`;
+  }
+  s+=`<text x="${bx+bw/2}" y="${AXV===4?pt-57:tt-11}" text-anchor="middle" font-size="22" font-weight="900" letter-spacing="1" fill="var(--acc)">TV</text>
+    <text x="${bx+bw/2}" y="${AXV===4?pb+73:bb+28}" text-anchor="middle" font-size="22" font-weight="900" letter-spacing="1" fill="var(--ott)">OTT</text>`;
   const near=x=>Math.abs(x-mx)<36;
+  // a label is white while the band still covers its centre, coloured once the band has thinned out
   for(let v=0; v<=100; v+=10){ const x=X(v), hide=near(x)?'opacity="0"':'';
-    s+=`<line x1="${x}" x2="${x}" y1="${pt-4}" y2="${pt}" stroke="var(--acc)"/>
-      <text x="${x}" y="${tt+14}" text-anchor="middle" font-size="10.5" fill="#7d8c9b" font-weight="600" ${hide}>${fE(B()*(100-v)/100)}억</text>
-      <text x="${x}" y="${tb-6}" text-anchor="middle" font-size="11.5" fill="#33475b" font-weight="800" ${hide}>${100-v}%</text>
-      <text x="${x}" y="${bt+15}" text-anchor="middle" font-size="11.5" fill="#94582a" font-weight="800" ${hide}>${v}%</text>
-      <text x="${x}" y="${bb-6}" text-anchor="middle" font-size="10.5" fill="#b08860" font-weight="600" ${hide}>${fE(B()*v/100)}억</text>`; }
+    const W4=AXV===4, yTW=W4?pt-38:tt+14, yTP=W4?pt-23:tb-6, yOP=W4?pb+32:bt+15, yOW=W4?pb+46:bb-6;
+    s+=`<text x="${x}" y="${yTW}" text-anchor="middle" font-size="10.5" fill="${W4?'#7d8c9b':'rgba(255,255,255,.75)'}" font-weight="600" ${hide}>${fE(B()*(100-v)/100)}억</text>
+      <text x="${x}" y="${yTP}" text-anchor="middle" font-size="11.5" fill="${W4?'#2f4458':'#fff'}" font-weight="800" ${hide}>${100-v}%</text>
+      <text x="${x}" y="${yOP}" text-anchor="middle" font-size="11.5" fill="${W4?'#8f5526':'#fff'}" font-weight="800" ${hide}>${v}%</text>
+      <text x="${x}" y="${yOW}" text-anchor="middle" font-size="10.5" fill="${W4?'#b08860':'rgba(255,255,255,.8)'}" font-weight="600" ${hide}>${fE(B()*v/100)}억</text>`; }
   // tolerance bars (bottom of plot)
   const zb=(Z,lab,col,yv)=>{ const a=X(Z[0]), b=X(Z[1]), y=Y(yv);
     return `<rect x="${a}" y="${pt}" width="${Math.max(2,b-a)}" height="${pb-pt}" fill="${col}" opacity=".06"/>
@@ -494,19 +499,21 @@ function drawChart(me){
   s+=zb(Z1,'Reach 1+','#56a274',yz1)+zb(Z3,'Reach 3+','#56a274',yz3);
   // series
   const path=k=>G.map((g,i)=>`${i?'L':'M'}${X(g.share).toFixed(1)},${Y(Math.max(y0,g[k])).toFixed(1)}`).join('');
-  s+=`<g clip-path="url(#cp)"><path d="${path('u1')}L${X(100)},${pb}L${X(0)},${pb}Z" fill="url(#ga)"/>
+  s+=`<g clip-path="url(#cp)"><path d="${path('u1')}L${X(100)},${pb}L${X(0)},${pb}Z" fill="#354758" fill-opacity=".06"/>
     <path d="${path('u3')}" fill="none" stroke="var(--u3)" stroke-width="2.6" stroke-linejoin="round"/>
     <path d="${path('u1')}" fill="none" stroke="var(--u1)" stroke-width="3.2" stroke-linejoin="round"/></g>`;
   // optimum markers
-  const om=(g,k,above)=>{ const ox=X(g.share), oy=Y(g[k]); const right = !(mx>ox && mx-ox<150) ; const lx=right?ox+10:ox-10;
+  const om=(g,k,above)=>{ const ox=X(g.share), oy=Y(g[k]); const right=!(mx>ox && mx-ox<104); const lx=right?ox+9:ox-9, an=right?'start':'end';
+    const ya=above?oy-25:oy+21, yb=above?oy-11:oy+35, halo='stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke"';
     return `<circle cx="${ox}" cy="${oy}" r="6.5" fill="#fff" stroke="var(--best)" stroke-width="2.5"/><circle cx="${ox}" cy="${oy}" r="2.4" fill="var(--best)"/>
-      <text x="${lx}" y="${above?oy-11:oy+19}" text-anchor="${right?'start':'end'}" font-size="11" font-weight="800" fill="var(--best-ink)">${k==='u1'?'1+':'3+'} 최적 ${fP(100-g.share)}:${fP(g.share)} · ${f1(g[k])}%</text>`; };
+      <text x="${lx}" y="${ya}" text-anchor="${an}" font-size="10.5" font-weight="800" fill="var(--best-ink)" ${halo}>${k==='u1'?'Reach 1+':'Reach 3+'} 최적</text>
+      <text x="${lx}" y="${yb}" text-anchor="${an}" font-size="11" font-weight="800" fill="var(--best-ink)" ${halo}>TV ${fP(100-g.share)} : OTT ${fP(g.share)}</text>`; };
   s+=om(OPT1,'u1',true)+om(OPT3,'u3',false);
   // me
-  s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb+21}" stroke="var(--me)" stroke-width="2"/>
+  s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb}" stroke="var(--me)" stroke-width="2"/>
     <circle cx="${mx}" cy="${Y(me.u3)}" r="5.5" fill="var(--me)" stroke="#fff" stroke-width="2.5"/><circle cx="${mx}" cy="${Y(me.u1)}" r="7" fill="var(--me)" stroke="#fff" stroke-width="2.8"/>
-    <rect x="${mx-36}" y="${pb+28}" width="72" height="22" rx="11" fill="var(--me)" stroke="#fff" stroke-width="2"/><text x="${mx}" y="${pb+43}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">OTT ${fP(S.share)}%</text>
-    <rect x="${mx-36}" y="${pt-34}" width="72" height="22" rx="11" fill="var(--me)" stroke="#fff" stroke-width="2"/><text x="${mx}" y="${pt-19}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">TV ${fP(100-S.share)}%</text>`;
+    <rect x="${mx-36}" y="${pb+12}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${pb+27}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">OTT ${fP(S.share)}%</text>
+    <rect x="${mx-36}" y="${pt-34}" width="72" height="22" rx="11" fill="${true?'#fff':'var(--me)'}" stroke="${true?'var(--me)':'#fff'}" stroke-width="2"/><text x="${mx}" y="${pt-19}" text-anchor="middle" font-size="11" font-weight="800" fill="${true?'var(--me)':'#fff'}">TV ${fP(100-S.share)}%</text>`;
   // hover layer
   s+=`<g id="hov" visibility="hidden"><line id="hl" y1="${pt}" y2="${pb}" stroke="#1e2a38" stroke-opacity=".35" stroke-dasharray="3 3"/><circle id="h1" r="5" fill="#fff" stroke="var(--u1)" stroke-width="2.5"/><circle id="h3" r="4.5" fill="#fff" stroke="var(--u3)" stroke-width="2.5"/></g>`;
   svg.innerHTML=s;
@@ -527,7 +534,7 @@ function placeCard(el, x, top){
 /* interaction: hover card follows the curve, click/drag sets share */
 (function(){
   const svg=$('svg'), hc=$('hcard'); let drag=false;
-  const shareAt=e=>{ const r=svg.getBoundingClientRect(), px=(e.clientX-r.left)*(SC.W/r.width); const v=(px-SC.m.l)/(SC.W-SC.m.l-SC.m.r)*100; return Math.max(0,Math.min(100,Math.round(v*2)/2)); };
+  const shareAt=e=>{ const r=svg.getBoundingClientRect(), px=(e.clientX-r.left)*(SC.W/r.width); const v=(px-SC.m.l-SC.PX)/(SC.W-SC.m.l-SC.m.r-2*SC.PX)*100; return Math.max(0,Math.min(100,Math.round(v*2)/2)); };
   function hover(v){
     const g=calc(v), x=SC.X(v);
     const hv=document.getElementById('hov'); if(!hv) return; hv.setAttribute('visibility','visible');
