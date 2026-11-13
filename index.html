@@ -127,6 +127,10 @@ button.kpi.cur:hover{border-color:var(--line);box-shadow:0 1px 2px rgba(20,30,45
 .callout.dim{opacity:.18}
 .callout .h{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--me)}
 .callout .h i{width:8px;height:8px;border-radius:50%;background:var(--me);display:inline-block}
+.mx-tv{color:var(--acc)}.mx-ott{color:#b5793c}
+.hcard .mx-tv{color:#a9bdd1}.hcard .mx-ott{color:#f0b47a}
+.axchip{display:inline-flex;align-items:center;gap:4px;padding:1px 7px 1px 6px;border-radius:99px;font-size:11px;font-weight:800;color:#fff;vertical-align:1px}
+.axchip.tv{background:var(--acc)}.axchip.ott{background:var(--ott)}
 .callout .mix{font-size:15px;font-weight:800;letter-spacing:-.4px;margin:2px 0 1px}
 .callout .won{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:6px}
 .callout .row{display:flex;justify-content:space-between;gap:18px;font-size:11.5px;color:var(--ink2);font-weight:600;padding:1px 0}
@@ -354,6 +358,7 @@ const won=v=>Math.round(v).toLocaleString('ko-KR');
 const signed=v=>{ const r=Math.round(v*10)/10; return r>0?`<span class="up">▲${r.toFixed(1)}%p</span>`:r<0?`<span class="dn">▼${Math.abs(r).toFixed(1)}%p</span>`:`<span class="mut">±0.0%p</span>`; };
 const signed2=v=>{ const r=Math.round(v*100)/100; return r>0?`+${r.toFixed(2)}`:r<0?`−${Math.abs(r).toFixed(2)}`:'−0.00'; };
 const mixTxt=s=>`TV ${fP(100-s)} : OTT ${fP(s)}`;
+const mixHtml=s=>`<span class="mx-tv">TV ${fP(100-s)}</span> : <span class="mx-ott">OTT ${fP(s)}</span>`;
 function eokTxt(w){ const e=w/EOK; if(e>=1) return fE(e)+'억'; const m=w/1e4; return m>=1? Math.round(m).toLocaleString('ko-KR')+'만':won(w); }
 const digits=s=>parseFloat(String(s).replace(/[^\d.]/g,''))||0;
 
@@ -436,7 +441,7 @@ function render(){
   $('kb1v').innerHTML=optV(OPT1); $('kb1s').innerHTML=`Reach 1+ <b>${f1(OPT1.u1)}%</b>`+(isCur(OPT1)?' · <b class="up">현재 적용 중</b>':'');
   $('kb3v').innerHTML=optV(OPT3); $('kb3s').innerHTML=`Reach 3+ <b>${f1(OPT3.u3)}%</b>`+(isCur(OPT3)?' · <b class="up">현재 적용 중</b>':'');
   $('kb1').classList.toggle('cur',isCur(OPT1)); $('kb3').classList.toggle('cur',isCur(OPT3));
-  $('cSub').textContent=`총 ${eokTxt(S.won)} 원 · 아래 축은 OTT, 위 축은 TV 비중 · 파란 선이 내가 설정한 비중`;
+  $('cSub').innerHTML=`총 ${eokTxt(S.won)} 원 · <span class="axchip tv">위 축 TV</span> <span class="axchip ott">아래 축 OTT</span> 비중 · 파란 선이 내가 설정한 비중`;
   drawChart(me); drawTable(me);
 }
 
@@ -444,7 +449,7 @@ function render(){
 function niceStep(range,n){ const raw=range/n, p=Math.pow(10,Math.floor(Math.log10(raw))); for(const m of [1,2,2.5,5,10]) if(m*p>=raw) return m*p; return 10*p; }
 let SC=null, hovering=false;
 function drawChart(me){
-  const svg=$('svg'), W=$('plot').clientWidth, H=470, m={l:46,r:20,t:64,b:52};
+  const svg=$('svg'), W=$('plot').clientWidth, H=500, m={l:76,r:22,t:74,b:66};
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H);
   const x0=0,x1=100;
   let lo=Math.min(...G.flatMap(g=>[g.u1,g.u3])), hi=Math.max(...G.flatMap(g=>[g.u1,g.u3]));
@@ -462,13 +467,23 @@ function drawChart(me){
       s+=`<line x1="${ex}" x2="${ex}" y1="${pt}" y2="${pb}" stroke="#b9c1c9" stroke-dasharray="2 3"/><text transform="translate(${tx},${ty}) rotate(-90)" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600">OTT 곡선 실측 끝 ${OTT_MAX}억 →</text>`; } }
   // grid + y labels
   for(let v=y0; v<=y1+1e-9; v+=step){ const y=Y(v); s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="#e6e9ec"/><text x="${m.l-9}" y="${y+3.5}" text-anchor="end" font-size="11" fill="var(--muted)" font-weight="600">${+v.toFixed(1)}%</text>`; }
-  // x axes: bottom OTT, top TV
-  const near=x=>Math.abs(x-mx)<34;
-  for(let v=0; v<=100; v+=10){ const x=X(v), hide=near(x);
-    s+=`<line x1="${x}" x2="${x}" y1="${pb}" y2="${pb+4}" stroke="#c6ccd2"/><line x1="${x}" x2="${x}" y1="${pt-4}" y2="${pt}" stroke="#c6ccd2"/>`;
-    if(!hide) s+=`<text x="${x}" y="${pb+18}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-weight="700">${v}%</text><text x="${x}" y="${pt-11}" text-anchor="middle" font-size="11" fill="var(--ink2)" font-weight="700">${100-v}%</text>`;
-    s+=`<text x="${x}" y="${pb+32}" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600" ${hide?'opacity="0"':''}>${fE(B()*v/100)}억</text><text x="${x}" y="${pt-25}" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-weight="600" ${hide?'opacity="0"':''}>${fE(B()*(100-v)/100)}억</text>`; }
-  s+=`<text x="${m.l-40}" y="${pb+18}" font-size="10.5" fill="var(--ott)" font-weight="800">OTT</text><text x="${m.l-40}" y="${pt-11}" font-size="10.5" fill="var(--acc)" font-weight="800">TV</text>`;
+  // x axes: top = TV band (navy), bottom = OTT band (orange), composition ribbon in between
+  const rb=pb+5, rh=12, bt=pb+21, bb=pb+57, tt=pt-41, tb=pt-5;
+  s+=`<rect x="4" y="${tt}" width="${W-m.r+12}" height="${tb-tt}" rx="9" fill="rgba(73,94,114,.08)"/>
+    <rect x="4" y="${bt}" width="${W-m.r+12}" height="${bb-bt}" rx="9" fill="rgba(201,138,74,.11)"/>
+    <line x1="${m.l}" x2="${W-m.r}" y1="${pt}" y2="${pt}" stroke="var(--acc)" stroke-width="2"/>
+    <rect x="10" y="${tt+8}" width="38" height="20" rx="10" fill="var(--acc)"/><text x="29" y="${tt+22}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">TV</text>
+    <rect x="10" y="${bt+8}" width="38" height="20" rx="10" fill="var(--ott)"/><text x="29" y="${bt+22}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">OTT</text>
+    <polygon points="${X(0)},${rb} ${X(100)},${rb} ${X(0)},${rb+rh}" fill="var(--acc)"/>
+    <polygon points="${X(100)},${rb} ${X(100)},${rb+rh} ${X(0)},${rb+rh}" fill="var(--ott)"/>
+    <text x="${X(0)+6}" y="${rb+9.5}" font-size="9.5" font-weight="800" fill="#fff">TV</text><text x="${X(100)-6}" y="${rb+9.5}" text-anchor="end" font-size="9.5" font-weight="800" fill="#fff">OTT</text>`;
+  const near=x=>Math.abs(x-mx)<36;
+  for(let v=0; v<=100; v+=10){ const x=X(v), hide=near(x)?'opacity="0"':'';
+    s+=`<line x1="${x}" x2="${x}" y1="${pt-4}" y2="${pt}" stroke="var(--acc)"/>
+      <text x="${x}" y="${tt+14}" text-anchor="middle" font-size="10.5" fill="#7d8c9b" font-weight="600" ${hide}>${fE(B()*(100-v)/100)}억</text>
+      <text x="${x}" y="${tb-6}" text-anchor="middle" font-size="11.5" fill="#33475b" font-weight="800" ${hide}>${100-v}%</text>
+      <text x="${x}" y="${bt+15}" text-anchor="middle" font-size="11.5" fill="#94582a" font-weight="800" ${hide}>${v}%</text>
+      <text x="${x}" y="${bb-6}" text-anchor="middle" font-size="10.5" fill="#b08860" font-weight="600" ${hide}>${fE(B()*v/100)}억</text>`; }
   // tolerance bars (bottom of plot)
   const zb=(Z,lab,col,yv)=>{ const a=X(Z[0]), b=X(Z[1]), y=Y(yv);
     return `<rect x="${a}" y="${pt}" width="${Math.max(2,b-a)}" height="${pb-pt}" fill="${col}" opacity=".06"/>
@@ -488,16 +503,16 @@ function drawChart(me){
       <text x="${lx}" y="${above?oy-11:oy+19}" text-anchor="${right?'start':'end'}" font-size="11" font-weight="800" fill="var(--best-ink)">${k==='u1'?'1+':'3+'} 최적 ${fP(100-g.share)}:${fP(g.share)} · ${f1(g[k])}%</text>`; };
   s+=om(OPT1,'u1',true)+om(OPT3,'u3',false);
   // me
-  s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb}" stroke="var(--me)" stroke-width="2"/>
+  s+=`<line x1="${mx}" x2="${mx}" y1="${pt}" y2="${pb+21}" stroke="var(--me)" stroke-width="2"/>
     <circle cx="${mx}" cy="${Y(me.u3)}" r="5.5" fill="var(--me)" stroke="#fff" stroke-width="2.5"/><circle cx="${mx}" cy="${Y(me.u1)}" r="7" fill="var(--me)" stroke="#fff" stroke-width="2.8"/>
-    <rect x="${mx-33}" y="${pb+4}" width="66" height="21" rx="10.5" fill="var(--me)"/><text x="${mx}" y="${pb+18.5}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">OTT ${fP(S.share)}%</text>
-    <rect x="${mx-33}" y="${pt-25}" width="66" height="21" rx="10.5" fill="var(--me)"/><text x="${mx}" y="${pt-10.5}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">TV ${fP(100-S.share)}%</text>`;
+    <rect x="${mx-36}" y="${pb+28}" width="72" height="22" rx="11" fill="var(--me)" stroke="#fff" stroke-width="2"/><text x="${mx}" y="${pb+43}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">OTT ${fP(S.share)}%</text>
+    <rect x="${mx-36}" y="${pt-34}" width="72" height="22" rx="11" fill="var(--me)" stroke="#fff" stroke-width="2"/><text x="${mx}" y="${pt-19}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">TV ${fP(100-S.share)}%</text>`;
   // hover layer
   s+=`<g id="hov" visibility="hidden"><line id="hl" y1="${pt}" y2="${pb}" stroke="#1e2a38" stroke-opacity=".35" stroke-dasharray="3 3"/><circle id="h1" r="5" fill="#fff" stroke="var(--u1)" stroke-width="2.5"/><circle id="h3" r="4.5" fill="#fff" stroke="var(--u3)" stroke-width="2.5"/></g>`;
   svg.innerHTML=s;
   // pinned callout
   const co=$('callout');
-  co.innerHTML=`<div class="h"><i></i>내 플랜</div><div class="mix num">${mixTxt(S.share)}</div><div class="won num">TV ${eokTxt(me.t*EOK)} · OTT ${eokTxt(me.o*EOK)}</div>
+  co.innerHTML=`<div class="h"><i></i>내 플랜</div><div class="mix num">${mixHtml(S.share)}</div><div class="won num">TV ${eokTxt(me.t*EOK)} · OTT ${eokTxt(me.o*EOK)}</div>
     <div class="row"><span>Reach 1+</span><span><b class="num">${f1(me.u1)}%</b><em class="num">${signed(me.u1-BASE.u1)}</em></span></div>
     <div class="row"><span>Reach 3+</span><span><b class="num">${f1(me.u3)}%</b><em class="num">${signed(me.u3-BASE.u3)}</em></span></div>`;
   placeCard(co, mx, Y(me.u3)+44);
@@ -521,7 +536,7 @@ function placeCard(el, x, top){
     c1.setAttribute('cx',x); c1.setAttribute('cy',SC.Y(g.u1)); c3.setAttribute('cx',x); c3.setAttribute('cy',SC.Y(g.u3));
     const sg=d=>{ const r=Math.round(d*10)/10; return r>0?`<em>▲${r.toFixed(1)}%p</em>`:r<0?`<em class="dn">▼${Math.abs(r).toFixed(1)}%p</em>`:`<em>±0.0%p</em>`; };
     const tag = Math.abs(v-OPT1.share)<1e-9 ? ' · Reach 1+ 최적' : Math.abs(v-OPT3.share)<1e-9 ? ' · Reach 3+ 최적' : (v>=Z1[0]&&v<=Z1[1]?' · 1+ 허용 구간':'');
-    hc.innerHTML=`<div class="t num">${mixTxt(v)}</div><div class="w num">TV ${eokTxt(g.t*EOK)} · OTT ${eokTxt(g.o*EOK)}${tag}</div>
+    hc.innerHTML=`<div class="t num">${mixHtml(v)}</div><div class="w num">TV ${eokTxt(g.t*EOK)} · OTT ${eokTxt(g.o*EOK)}${tag}</div>
       <div class="r"><span>Reach 1+</span><span><b class="num">${f1(g.u1)}%</b>${sg(g.u1-BASE.u1)}</span></div>
       <div class="r"><span>Reach 3+</span><span><b class="num">${f1(g.u3)}%</b>${sg(g.u3-BASE.u3)}</span></div>
       <div class="r sub"><span>TV 단독 1+ / 3+</span><b class="num">${f1(g.tv1)}% / ${f1(g.tv3)}%</b></div>
